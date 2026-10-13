@@ -201,6 +201,7 @@ input:focus-visible,select:focus-visible{outline:3px dashed var(--gold-d);outlin
 .recstate.own{background:#d5f0dc;color:#1d6b36}
 .recbtn{width:100%;font-size:22px}
 .recbtn.on{background:var(--bad);color:#fff}
+.recbtn.wait{background:var(--muted);color:var(--ink2)}
 .recbar{width:100%;height:10px;border:2px solid var(--ink);background:var(--sky2)}
 .recbar i{display:block;height:100%;width:0;background:var(--bad)}
 .recbar.run i{width:100%;transition:width 3s linear}
@@ -721,7 +722,7 @@ function renderGuide(k){const g=recGroups().filter(x=>x.lv<=k.lees),tot=g.reduce
   <button class="btn gold big" data-act="rec" data-lv="${lv}">🎙<span>Nu inspreken<small>${L_LEVELS[lv].n} · ${hoorPool(lv).length} woorden</small></span></button>
   <button class="btn" data-act="guidedone">Later, gebruik de computerstem</button>`;
   show('s-guide')}
-let RS={lv:0,i:0,from:'parent'},REC={mode:null,stream:null,mr:null,chunks:[],timer:null,on:false};
+let RS={lv:0,i:0,from:'parent'},REC={mode:null,stream:null,mr:null,chunks:[],timer:null,on:false,live:false};
 function openRec(lv,from){const ws=hoorPool(lv);const first=ws.findIndex(w=>!CLIPS[w.w]);RS={lv,i:first<0?0:first,from};renderRec()}
 function renderRec(){const ws=hoorPool(RS.lv),w=ws[RS.i],has=!!CLIPS[w.w],done=ws.filter(x=>CLIPS[x.w]).length;
   const s=$('#s-rec');
@@ -729,7 +730,7 @@ function renderRec(){const ws=hoorPool(RS.lv),w=ws[RS.i],has=!!CLIPS[w.w],done=w
   <div class="reccard">${w.e?`<div class="emo">${w.e}</div>`:''}<div class="bigword">${w.w}</div>
    <span class="recstate ${has?'own':''}">${has?'✓ Jouw opname':'Nu: computerstem'}</span>
    <div class="recbar" id="recbar"><i></i></div>
-   <button class="btn recbtn ${REC.on?'on':''}" data-act="recgo">${REC.on?'■ Stop':REC.mode==='file'?'🎙 Kies opname':'● Opnemen'}</button>
+   <button class="btn recbtn ${REC.on?(REC.live?'on':'wait'):''}" data-act="recgo">${REC.on?(REC.live?'■ Stop':'… Even wachten'):REC.mode==='file'?'🎙 Kies opname':'● Opnemen'}</button>
    <div class="two" style="width:100%"><button class="btn" data-act="recplay">▶ Luister</button><button class="btn grass" data-act="recnext">Volgende →</button></div>
    ${has?'<button class="btn ghost small" data-act="recdel">Opname wissen</button>':''}</div>
   ${REC.mode==='file'?`<p class="warn">De microfoon is hier niet beschikbaar. Tik op "Kies opname": je telefoon opent dan de recorder of je bestanden. Neem het woord op en kies het bestand.</p>`
@@ -742,15 +743,19 @@ async function recGo(){const w=hoorPool(RS.lv)[RS.i].w;
   // Fresh mic stream per recording: on iOS Safari a kept-open stream goes silent once a clip has played back.
   try{speechSynthesis.cancel()}catch(e){}if(AUD){AUD.pause();AUD=null}
   dropStream();
-  try{REC.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+  // No noise suppression: it swallows the short burst at the start of words like "kip".
+  try{REC.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false}});
     if(typeof MediaRecorder==='undefined')throw Error('no recorder')}
   catch(e){dropStream();REC.mode='file';renderRec();toast('Microfoon niet beschikbaar. Tik nog eens om een opname te kiezen.');return}
   const mr=new MediaRecorder(REC.stream);REC.chunks=[];REC.mr=mr;REC.on=true;
   mr.ondataavailable=e=>{if(e.data&&e.data.size)REC.chunks.push(e.data)};
-  mr.onstop=async()=>{clearTimeout(REC.timer);REC.on=false;REC.mr=null;dropStream();const b=new Blob(REC.chunks,{type:mr.mimeType||'audio/webm'});
+  mr.onstop=async()=>{clearTimeout(REC.timer);REC.on=false;REC.live=false;REC.mr=null;dropStream();const b=new Blob(REC.chunks,{type:mr.mimeType||'audio/webm'});
     if(b.size>800){await putClip(w,b);playWord(w)}else toast('Er is niets opgenomen. Probeer het nog eens.');if(SCREEN==='s-rec')renderRec()};
-  mr.start();renderRec();requestAnimationFrame(()=>requestAnimationFrame(()=>$('#recbar')?.classList.add('run')));
-  REC.timer=setTimeout(stopRec,3000)}
+  // A freshly opened mic (iOS especially) needs a moment before sound comes through. Show "speak now"
+  // (red Stop button + running bar) only after the recorder has started plus a margin, so the first sound isn't lost.
+  mr.onstart=()=>{REC.timer=setTimeout(()=>{if(REC.mr!==mr)return;REC.live=true;renderRec();
+    requestAnimationFrame(()=>requestAnimationFrame(()=>$('#recbar')?.classList.add('run')));REC.timer=setTimeout(stopRec,3000)},400)};
+  mr.start();renderRec()}
 function stopRec(){if(REC.mr&&REC.mr.state==='recording')REC.mr.stop()}
 function dropStream(){if(REC.stream){REC.stream.getTracks().forEach(t=>t.stop());REC.stream=null}}
 function closeRec(){stopRec();if(!REC.mr)dropStream();
