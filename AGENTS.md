@@ -103,6 +103,7 @@ Every exercise screen has a progress-pip bar, an icon plus short prompt text (`P
 - **Storage:** progress is in localStorage and recordings in IndexedDB, per device and browser. There is no sync or backup, and clearing site data wipes everything.
 - **Emoji pictures:** rendering differs per OS, and a few newer emoji (🪟 🪀) may not exist on older devices.
 - **Kid-facing UI:** must work for a non-reader. Use big tap targets, pictures and icons over text, and no reliance on audio instructions.
+- **No zoom:** the page is locked at 100% (viewport `maximum-scale=1, user-scalable=no`, `touch-action: manipulation`, `overflow-x: hidden`, and `gesturestart` blocked for iOS pinch). Double-taps made iOS Safari zoom in, after which the page could be panned sideways. Layouts must fit 320 px wide; only the build palette scrolls horizontally, inside its own strip.
 - The standalone `index.html` already has `<!doctype>`, a viewport meta and safe-area padding. (The Artifact version omits them because claude.ai adds its own skeleton.)
 
 ## Open items and assumptions to verify

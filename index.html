@@ -1,4 +1,4 @@
-<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style></head><body>
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style></head><body>
 <title>Pixeldorp</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
@@ -14,7 +14,8 @@
   --f-pix:'Silkscreen','Courier New',monospace;
   color-scheme:light;
 }
-html,body{height:100%}
+/* No zooming or sideways panning: double-taps from kids (and the tap-twice confirm buttons) made iOS zoom in. */
+html,body{height:100%;overflow-x:hidden;touch-action:manipulation}
 body{background:var(--sky);color:var(--ink);font-family:var(--f-read);font-size:17px;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
 #app{height:100%;max-width:520px;margin:0 auto;padding-inline:16px;box-sizing:border-box;display:flex;flex-direction:column}
 .screen{flex:1;display:flex;flex-direction:column;gap:14px;padding-block:14px;min-height:0;overflow-y:auto}
@@ -765,6 +766,9 @@ function closeRec(){stopRec();if(!REC.mr)dropStream();
   if(RS.from==='guide'){const k=cur()||DB.kids[DB.kids.length-1];DB.cur=k.id;save();renderHome()}else renderParent()}
 
 /* ---------- events ---------- */
+// iOS Safari ignores user-scalable=no for pinch zoom; block it here.
+['gesturestart','gesturechange'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
+
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,k=cur();
   switch(a){
    case'addkid':renderEdit(null);break;
