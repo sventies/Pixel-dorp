@@ -96,7 +96,7 @@ Every exercise screen has a progress-pip bar, an icon plus short prompt text (`P
 
 ## Constraints and gotchas
 
-- **Microphone:** uses `getUserMedia` + `MediaRecorder`. The claude.ai Artifact version (https://claude.ai/artifact/AUgzDVsBFhD4unpXcpweXX) blocks the mic, so the code falls back to `<input type="file" accept="audio/*" capture>` (pick a recording per word). Self-hosted on https or localhost, the mic works directly.
+- **Microphone:** uses `getUserMedia` + `MediaRecorder`. The claude.ai Artifact version (https://claude.ai/artifact/AUgzDVsBFhD4unpXcpweXX) blocks the mic, so the code falls back to `<input type="file" accept="audio/*" capture>` (pick a recording per word). Self-hosted on https or localhost, the mic works directly. Each recording opens a fresh `getUserMedia` stream and stops it afterwards: on iOS Safari a stream kept open across recordings goes silent once a clip has played back (the 2nd recording came out empty).
 - **Speech:** the computer voice says letter *names* ("em"), not letter *sounds* ("mmm"). That's why TTS is never used for single letters. Real phoneme audio would need recorded clips.
 - **Storage:** progress is in localStorage and recordings in IndexedDB, per device and browser. There is no sync or backup, and clearing site data wipes everything.
 - **Emoji pictures:** rendering differs per OS, and a few newer emoji (🪟 🪀) may not exist on older devices.

@@ -735,17 +735,21 @@ function renderRec(){const ws=hoorPool(RS.lv),w=ws[RS.i],has=!!CLIPS[w.w],done=w
 async function recGo(){const w=hoorPool(RS.lv)[RS.i].w;
   if(REC.on){stopRec();return}
   if(REC.mode==='file'){const f=$('#rec-file');f.value='';f.onchange=async()=>{const file=f.files[0];if(file){await putClip(w,file);playWord(w);renderRec()}};f.click();return}
-  try{if(!REC.stream)REC.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+  // Fresh mic stream per recording: on iOS Safari a kept-open stream goes silent once a clip has played back.
+  try{speechSynthesis.cancel()}catch(e){}if(AUD){AUD.pause();AUD=null}
+  dropStream();
+  try{REC.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
     if(typeof MediaRecorder==='undefined')throw Error('no recorder')}
-  catch(e){REC.mode='file';renderRec();toast('Microfoon niet beschikbaar. Tik nog eens om een opname te kiezen.');return}
+  catch(e){dropStream();REC.mode='file';renderRec();toast('Microfoon niet beschikbaar. Tik nog eens om een opname te kiezen.');return}
   const mr=new MediaRecorder(REC.stream);REC.chunks=[];REC.mr=mr;REC.on=true;
   mr.ondataavailable=e=>{if(e.data&&e.data.size)REC.chunks.push(e.data)};
-  mr.onstop=async()=>{clearTimeout(REC.timer);REC.on=false;REC.mr=null;const b=new Blob(REC.chunks,{type:mr.mimeType||'audio/webm'});
+  mr.onstop=async()=>{clearTimeout(REC.timer);REC.on=false;REC.mr=null;dropStream();const b=new Blob(REC.chunks,{type:mr.mimeType||'audio/webm'});
     if(b.size>800){await putClip(w,b);playWord(w)}else toast('Er is niets opgenomen. Probeer het nog eens.');if(SCREEN==='s-rec')renderRec()};
   mr.start();renderRec();requestAnimationFrame(()=>requestAnimationFrame(()=>$('#recbar')?.classList.add('run')));
   REC.timer=setTimeout(stopRec,3000)}
 function stopRec(){if(REC.mr&&REC.mr.state==='recording')REC.mr.stop()}
-function closeRec(){stopRec();if(REC.stream){REC.stream.getTracks().forEach(t=>t.stop());REC.stream=null}
+function dropStream(){if(REC.stream){REC.stream.getTracks().forEach(t=>t.stop());REC.stream=null}}
+function closeRec(){stopRec();if(!REC.mr)dropStream();
   if(RS.from==='guide'){const k=cur()||DB.kids[DB.kids.length-1];DB.cur=k.id;save();renderHome()}else renderParent()}
 
 /* ---------- events ---------- */
