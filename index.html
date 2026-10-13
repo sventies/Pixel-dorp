@@ -1,0 +1,795 @@
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style></head><body>
+<title>Pixeldorp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one-screen pixel app, a single 520px column; screens swap in place. Single committed light look (sky + village). */
+:root{
+  --sky:#cbe6f4; --sky2:#e6f3fa; --paper:#ffffff; --ink:#1b2033; --ink2:#55607a;
+  --lees:#e2581b; --lees-d:#9f3a0b; --lees-l:#fde0c4;
+  --reken:#2350d8; --reken-d:#142f8f; --reken-l:#d3e0fc;
+  --grass:#4c9a3c; --grass-d:#2b6524; --gold:#f6c02c; --gold-d:#a77a05;
+  --ok:#2f9e52; --bad:#d4403a; --muted:#d8dee8;
+  --f-read:'Andika','Trebuchet MS',system-ui,sans-serif;
+  --f-pix:'Silkscreen','Courier New',monospace;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:var(--sky);color:var(--ink);font-family:var(--f-read);font-size:17px;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
+#app{height:100%;max-width:520px;margin:0 auto;padding-inline:16px;box-sizing:border-box;display:flex;flex-direction:column}
+.screen{flex:1;display:flex;flex-direction:column;gap:14px;padding-block:14px;min-height:0;overflow-y:auto}
+h1,h2,h3{margin:0;font-family:var(--f-pix);font-weight:700;text-wrap:balance}
+h1{font-size:34px;letter-spacing:.02em}
+h2{font-size:22px}
+h3{font-size:16px;letter-spacing:.06em}
+p{margin:0;line-height:1.5}
+.pix{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+.row{display:flex;align-items:center;gap:10px}
+.grow{flex:1;min-width:0}
+.muted{color:var(--ink2)}
+.small{font-size:14px}
+
+/* Pixel buttons */
+.btn{font-family:var(--f-pix);font-size:18px;border:3px solid var(--ink);background:var(--paper);color:var(--ink);border-radius:3px;box-shadow:0 5px 0 var(--ink);padding:12px 16px;cursor:pointer;transition:transform .05s,box-shadow .05s;text-align:center}
+.btn:active:not(:disabled){transform:translateY(4px);box-shadow:0 1px 0 var(--ink)}
+.btn:focus-visible{outline:3px dashed var(--gold-d);outline-offset:3px}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.lees{background:var(--lees);color:#fff}
+.btn.reken{background:var(--reken);color:#fff}
+.btn.grass{background:var(--grass);color:#fff}
+.btn.gold{background:var(--gold)}
+.btn.ghost{background:transparent;box-shadow:none;border-color:transparent;padding:8px}
+.btn.ghost:active{transform:none}
+.ibtn{width:52px;height:52px;padding:0;display:grid;place-items:center;flex:none}
+.big{display:flex;align-items:center;gap:14px;padding:16px 18px;font-size:26px;text-align:left;width:100%}
+.big small{display:block;font-family:var(--f-read);font-size:15px;font-weight:700;opacity:.9;letter-spacing:0}
+.big .pix{width:48px;height:48px;flex:none}
+
+.chip{font-family:var(--f-pix);font-size:16px;background:var(--paper);border:3px solid var(--ink);border-radius:3px;padding:4px 8px;display:inline-flex;gap:6px;align-items:center;font-variant-numeric:tabular-nums}
+.chip .pix{width:20px;height:20px}
+
+/* Kid picker */
+.kids{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.kidtile{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;font-size:20px}
+.kidtile .pix{width:72px;height:72px}
+.hero{display:flex;flex-direction:column;gap:6px;padding-top:8px}
+.hero .sub{font-family:var(--f-read);font-size:19px;font-weight:700;color:var(--ink2)}
+
+/* Home */
+.world{background:var(--paper);border:3px solid var(--ink);border-radius:3px;box-shadow:0 5px 0 var(--ink);padding:6px}
+.world canvas{width:100%;aspect-ratio:80/96;max-height:42vh;object-fit:contain;margin:0 auto}
+.nextbar{display:flex;align-items:center;gap:10px;background:var(--paper);border:3px solid var(--ink);border-radius:3px;padding:8px 10px}
+.nextbar .pix{width:36px;height:36px;flex:none}
+.meter{height:14px;border:2px solid var(--ink);background:var(--sky2);margin-top:4px}
+.meter i{display:block;height:100%;background:var(--gold)}
+.homebtns{display:flex;flex-direction:column;gap:14px}
+
+/* Exercise */
+.exbar{display:flex;align-items:center;gap:10px}
+.pips{flex:1;display:flex;gap:4px;min-width:0}
+.pip{flex:1;height:14px;border:2px solid var(--ink);background:var(--paper)}
+.pip.ok{background:var(--gold)}
+.pip.half{background:var(--lees-l)}
+.pip.no{background:var(--muted)}
+.pip.now{background:var(--sky2);box-shadow:inset 0 -4px 0 var(--ink2)}
+.prompt{font-size:18px;font-weight:700;color:var(--ink2);text-align:center;min-height:1.4em}
+.vis{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:190px;background:var(--paper);border:3px solid var(--ink);border-radius:3px;padding:14px;position:relative;overflow:hidden}
+.hint{font-size:22px;font-weight:700;color:var(--reken-d);text-align:center}
+.emo{font-size:min(30vw,128px);line-height:1.1}
+.bigletter{font-size:min(34vw,140px);font-weight:700;line-height:1}
+.bigword{font-size:min(17vw,76px);font-weight:700;letter-spacing:.03em;line-height:1.1}
+.speakbig{width:120px;height:120px}
+.speakbig svg{width:64px;height:64px}
+.opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding-bottom:10px}
+.opts.one{grid-template-columns:1fr}
+.opt{min-height:88px;font-family:var(--f-read);font-weight:700;font-size:30px;padding:6px;line-height:1.1}
+.opt.emo-o{font-size:50px}
+.opt.letter{font-size:46px}
+.opt.word{font-size:28px}
+.opt.num{font-size:40px;font-variant-numeric:tabular-nums}
+.opt.txt{font-size:23px}
+.opt.sent{font-size:23px;min-height:66px;text-align:left;padding-inline:16px}
+.opt.good{background:var(--ok);color:#fff}
+.opt.wrong{background:#f6d3d0;color:var(--ink2)}
+.opt.reveal{background:var(--gold);animation:pulse .5s ease-in-out 3}
+
+.tf{display:grid;grid-template-columns:repeat(5,40px);gap:6px;padding:8px;border:3px solid var(--ink);background:var(--paper)}
+.tf i{width:40px;height:40px;border:2px solid var(--muted);border-radius:50%;box-sizing:border-box}
+.tf i.a{background:var(--lees);border-color:var(--lees-d)}
+.tf i.b{background:var(--reken);border-color:var(--reken-d)}
+.items{display:flex;flex-wrap:wrap;gap:12px 16px;justify-content:center;max-width:330px}
+.grp{display:flex;gap:1px;font-size:28px;line-height:1.2}
+.grp span{position:relative}
+.grp .gone{opacity:.25}
+.grp .gone::after{content:"";position:absolute;left:-2px;right:-2px;top:50%;height:4px;background:var(--bad);transform:rotate(-30deg)}
+.house{width:210px;display:flex;flex-direction:column}
+.roof{height:76px;background:var(--lees);clip-path:polygon(50% 0,100% 100%,0 100%);display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;color:#fff;font-size:38px;font-weight:700}
+.rooms{display:grid;grid-template-columns:1fr 1fr;border:3px solid var(--ink);border-top-width:0}
+.rooms div{height:82px;display:grid;place-items:center;font-size:42px;font-weight:700;border-top:3px solid var(--ink)}
+.rooms div+div{border-left:3px solid var(--ink)}
+.q{color:var(--reken)}
+.sum{font-size:min(13vw,56px);font-weight:700;font-variant-numeric:tabular-nums;text-align:center}
+.sum.sm{font-size:min(9vw,38px)}
+.clock{width:min(58vw,210px)}
+.coins{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center;max-width:330px}
+.coin{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:19px;box-sizing:border-box;border:7px solid #e2b93b;background:#cfd4dc;color:var(--ink)}
+.coin.c2{border-color:#cfd4dc;background:#e2b93b}
+.note{width:108px;height:60px;border:3px solid var(--ink);display:grid;place-items:center;font-weight:700;font-size:24px;border-radius:3px}
+.note.n5{background:#c3c9cf}.note.n10{background:#ef9b8a}.note.n20{background:#93b6ea}
+.rods{display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;justify-content:center}
+.rod{display:grid;grid-template-rows:repeat(10,13px);gap:2px;padding:2px;background:var(--reken-d)}
+.rod i{width:13px;background:var(--reken-l)}
+.units{display:grid;grid-template-columns:repeat(2,17px);gap:3px;align-content:end}
+.units i{width:17px;height:17px;background:var(--lees);box-shadow:inset 0 0 0 2px var(--lees-d)}
+.numline{width:100%;max-width:360px}
+.slots{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.slot{min-width:52px;height:66px;border-bottom:5px solid var(--ink);font-size:44px;font-weight:700;display:grid;place-items:center;padding-inline:4px}
+.slot.f{color:var(--ok)}
+.tiles{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding-bottom:10px}
+.tile{min-width:66px;height:70px;font-family:var(--f-read);font-weight:700;font-size:36px;padding:0 10px}
+.tile.used{visibility:hidden}
+.tile.wrong{background:#f6d3d0}
+
+.pop{position:fixed;left:50%;top:40%;transform:translateX(-50%);font-family:var(--f-pix);font-size:40px;font-weight:700;color:var(--gold);-webkit-text-stroke:2px var(--ink);pointer-events:none;animation:rise .9s ease-out forwards;z-index:20;display:flex;align-items:center;gap:8px}
+.pop .pix{width:40px;height:40px}
+.shake{animation:shake .35s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+@keyframes pulse{50%{transform:scale(1.06)}}
+@keyframes rise{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,-70px)}}
+@keyframes bob{50%{transform:translateY(-6px)}}
+
+/* Done */
+.done{align-items:center;text-align:center;justify-content:center}
+.trophy{width:120px;height:120px;animation:bob 1.2s steps(2) infinite}
+.rewards{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.rewards .chip{font-size:22px;padding:8px 12px}
+.rewards .chip .pix{width:28px;height:28px}
+.unlock{background:var(--paper);border:3px solid var(--ink);border-radius:3px;padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 5px 0 var(--gold-d)}
+.unlock .pix{width:56px;height:56px}
+
+/* Build */
+.bhud{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.timer{font-family:var(--f-pix);font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;background:var(--ink);color:var(--gold);padding:6px 10px;border-radius:3px}
+.timer.low{color:#ff8b7e}
+.bcanvas{background:var(--paper);border:3px solid var(--ink);border-radius:3px;padding:4px;display:flex;justify-content:center;min-height:0}
+.bcanvas canvas{width:min(100%,calc((100dvh - 330px) * 80 / 96));height:auto;aspect-ratio:80/96;touch-action:none;cursor:pointer}
+.palette{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px;scroll-snap-type:x proximity;flex:none}
+.tool{flex:none;width:72px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;font-size:11px;scroll-snap-align:start;box-shadow:0 4px 0 var(--ink)}
+.tool .pix{width:36px;height:36px}
+.tool.sel{background:var(--gold)}
+.tool.locked{background:var(--muted);color:var(--ink2)}
+.tool.locked .pix{opacity:.35;filter:grayscale(1)}
+.tool .cost{font-family:var(--f-pix);font-size:12px;display:flex;align-items:center;gap:2px}
+.tool .cost .pix{width:12px;height:12px}
+.overlay{position:fixed;inset:0;background:rgba(27,32,51,.55);display:grid;place-items:center;z-index:30;padding:16px}
+.card{background:var(--paper);border:3px solid var(--ink);border-radius:3px;box-shadow:0 6px 0 var(--ink);padding:20px;max-width:360px;width:100%;display:flex;flex-direction:column;gap:14px;text-align:center;align-items:center}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 14px;border-radius:3px;font-weight:700;z-index:40;max-width:90%;text-align:center}
+
+/* Parent area */
+.panel{background:var(--paper);border:3px solid var(--ink);border-radius:3px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-weight:700;font-size:15px}
+input[type=text],input[type=number],select{font:inherit;font-size:18px;padding:10px;border:3px solid var(--ink);border-radius:3px;background:var(--paper);color:var(--ink);width:100%;box-sizing:border-box;-webkit-user-select:text;user-select:text}
+input:focus-visible,select:focus-visible{outline:3px dashed var(--gold-d);outline-offset:2px}
+.avpick{display:flex;gap:8px;flex-wrap:wrap}
+.avpick button{padding:6px;box-shadow:0 3px 0 var(--ink)}
+.avpick button .pix{width:40px;height:40px}
+.avpick button.sel{background:var(--gold)}
+.kidrow{display:flex;align-items:center;gap:12px}
+.kidrow .pix{width:44px;height:44px;flex:none}
+.stat{display:grid;grid-template-columns:minmax(0,1fr) 90px 52px;gap:8px;align-items:center;font-size:15px}
+.stat .meter{margin:0}
+.stat .meter i{background:var(--ok)}
+.stat b{font-variant-numeric:tabular-nums;text-align:right}
+.suggest{background:var(--lees-l);border:3px solid var(--lees-d);border-radius:3px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* Visual guidance */
+.prompt{display:flex;align-items:center;justify-content:center;gap:8px;font-size:20px}
+.picon{font-size:26px}
+.slots.mini .slot{min-width:44px;height:54px;font-size:38px;border-bottom-width:4px}
+.slot.q{color:var(--lees);border-color:var(--lees)}
+.slot.hintfill{color:var(--ink2)}
+.olabel{display:block;font-family:var(--f-read);font-size:17px;font-weight:700;margin-top:2px;color:var(--ink)}
+.tile.reveal{background:var(--gold);animation:pulse .5s ease-in-out 3}
+.nudge .btn{animation:nudge 1.4s ease-in-out 2}
+@keyframes nudge{0%,100%{transform:translateY(0)}20%{transform:translateY(-6px)}40%{transform:translateY(0)}}
+
+/* Recorder */
+.reccard{background:var(--paper);border:3px solid var(--ink);border-radius:3px;box-shadow:0 5px 0 var(--ink);padding:18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.reccard .emo{font-size:84px}
+.recstate{font-weight:700;font-size:15px;padding:3px 8px;border-radius:3px;background:var(--sky2)}
+.recstate.own{background:#d5f0dc;color:#1d6b36}
+.recbtn{width:100%;font-size:22px}
+.recbtn.on{background:var(--bad);color:#fff}
+.recbar{width:100%;height:10px;border:2px solid var(--ink);background:var(--sky2)}
+.recbar i{display:block;height:100%;width:0;background:var(--bad)}
+.recbar.run i{width:100%;transition:width 3s linear}
+.wchips{display:flex;flex-wrap:wrap;gap:6px}
+.wchip{font:inherit;font-weight:700;font-size:15px;padding:5px 9px;border:2px solid var(--ink);border-radius:3px;background:var(--paper);color:var(--ink);cursor:pointer}
+.wchip.has{background:#d5f0dc}
+.wchip.now{outline:3px solid var(--gold-d);outline-offset:1px}
+.grouprow{display:flex;align-items:center;gap:10px;font-size:15px}
+.grouprow b{font-variant-numeric:tabular-nums}
+.steps{display:flex;flex-direction:column;gap:10px;margin:0;padding-left:22px;line-height:1.45}
+.warn{background:var(--lees-l);border:3px solid var(--lees-d);border-radius:3px;padding:10px;font-size:15px;line-height:1.45}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div id="app">
+  <section class="screen" id="s-welcome" hidden></section>
+  <section class="screen" id="s-kids" hidden></section>
+  <section class="screen" id="s-home" hidden></section>
+  <section class="screen" id="s-ex" hidden></section>
+  <section class="screen done" id="s-done" hidden></section>
+  <section class="screen" id="s-build" hidden></section>
+  <section class="screen" id="s-gate" hidden></section>
+  <section class="screen" id="s-parent" hidden></section>
+  <section class="screen" id="s-edit" hidden></section>
+  <section class="screen" id="s-guide" hidden></section>
+  <section class="screen" id="s-rec" hidden></section>
+  <input type="file" id="rec-file" accept="audio/*" capture hidden>
+</div>
+
+<script>
+'use strict';
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const R=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function wpick(o){let t=0;for(const k in o)t+=o[k];let r=Math.random()*t;for(const k in o){r-=o[k];if(r<0)return k}return Object.keys(o)[0]}
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()};
+const fmtTime=s=>{s=Math.max(0,s|0);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+
+/* ---------- storage ---------- */
+const KEY='pixeldorp.v1';
+let DB={kids:[],cur:null,voice:'',sfx:true};
+function load(){try{const t=localStorage.getItem(KEY);if(t)DB=Object.assign(DB,JSON.parse(t))}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){}}
+const cur=()=>DB.kids.find(k=>k.id===DB.cur);
+
+/* ---------- speech + sound ---------- */
+let voices=[];
+function loadVoices(){try{voices=speechSynthesis.getVoices().filter(v=>/^nl/i.test(v.lang))}catch(e){voices=[]}}
+if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
+/* computer voice: only used as fallback for a word without a parent recording */
+function tts(t){
+  if(!t||!('speechSynthesis' in window))return;
+  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='nl-NL';
+    const v=voices.find(v=>v.name===DB.voice)||voices.find(v=>v.lang==='nl-NL')||voices[0];
+    if(v)u.voice=v;u.rate=.8;speechSynthesis.speak(u)}catch(e){}
+}
+/* parent recordings, stored as blobs in IndexedDB (shared by all kids on this device) */
+const CLIPS={};let IDB=null,IDB_OK=true;
+function idb(){return new Promise(res=>{try{const r=indexedDB.open('pixeldorp-audio',1);
+  r.onupgradeneeded=()=>r.result.createObjectStore('clips');r.onsuccess=()=>res(IDB=r.result);r.onerror=()=>{IDB_OK=false;res(null)}}catch(e){IDB_OK=false;res(null)}})}
+async function loadClips(){const db=await idb();if(!db)return;
+  return new Promise(res=>{try{const req=db.transaction('clips').objectStore('clips').openCursor();
+    req.onsuccess=()=>{const c=req.result;if(c){CLIPS[c.key]=URL.createObjectURL(c.value);c.continue()}else res()};req.onerror=()=>res()}catch(e){res()}})}
+async function putClip(w,blob){if(CLIPS[w])URL.revokeObjectURL(CLIPS[w]);CLIPS[w]=URL.createObjectURL(blob);
+  const db=IDB||await idb();if(!db)return;try{db.transaction('clips','readwrite').objectStore('clips').put(blob,w)}catch(e){IDB_OK=false}}
+async function delClip(w){if(CLIPS[w]){URL.revokeObjectURL(CLIPS[w]);delete CLIPS[w]}const db=IDB||await idb();if(db)try{db.transaction('clips','readwrite').objectStore('clips').delete(w)}catch(e){}}
+let AUD=null;
+function playWord(w){try{speechSynthesis.cancel()}catch(e){}if(AUD){AUD.pause();AUD=null}
+  if(CLIPS[w]){AUD=new Audio(CLIPS[w]);AUD.play().catch(()=>tts(w));return}tts(w)}
+let AC;
+function beep(notes){if(DB.sfx===false)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();let t=AC.currentTime;
+  for(const[f,d]of notes){const o=AC.createOscillator(),g=AC.createGain();o.type='square';o.frequency.value=f;
+    g.gain.setValueAtTime(.06,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d);t+=d*.9}}catch(e){}}
+const SFX={ok:()=>beep([[660,.08],[990,.15]]),bad:()=>beep([[180,.2]]),place:()=>beep([[520,.05],[780,.05]]),
+  win:()=>beep([[523,.1],[659,.1],[784,.1],[1047,.3]]),tick:()=>beep([[880,.03]])};
+
+/* ---------- pixel sprites ---------- */
+const PAL={g:'#5aa848',G:'#3f8434',y:'#ecd18e',Y:'#d2b064',b:'#4aa3df',B:'#2f7fc0',w:'#ffffff',k:'#1b2033',r:'#e04444',R:'#9e2b2b',
+  o:'#f08a24',n:'#8a5a3b',N:'#5e3b25',p:'#f4a6c1',P:'#8e5cc7',l:'#f6c02c',s:'#a5adb7',S:'#6b7480',c:'#a9dcff',e:'#2f8f3a',E:'#1f6a29',v:'#4caf50',u:'#3f6fd8'};
+function drawSprite(ctx,rows,x,y){for(let j=0;j<8;j++){const row=rows[j]||'';for(let i=0;i<8;i++){const ch=row[i];if(ch&&ch!=='.'){ctx.fillStyle=PAL[ch];ctx.fillRect(x+i,y+j,1,1)}}}}
+const SPR={
+  star:["...ll...","...ll...","llllllll",".llllll.","..llll..",".ll..ll.","ll....ll","........"],
+  brick:["RRRRRRRR","rrrRrrrr","rrrRrrrr","RRRRRRRR","rRrrrrRr","rRrrrrRr","RRRRRRRR","........"],
+  trophy:["llllllll","lwllllll","lwllllll",".llllll.","..llll..","...ll...","..llll..",".NNNNNN."],
+  gum:["........","....pp..","...pppp.","..pppppp",".wwpppp.",".wwwpp..","..ww....","........"],
+};
+const TILES=[
+ {id:'gras',name:'Gras',t:'g',need:0,cost:1,spr:["gggggggg","ggGggggg","gggggGgg","gggggggg","gGgggggg","ggggggGg","gggGgggg","gggggggg"]},
+ {id:'water',name:'Water',t:'g',need:0,cost:1,frames:[["bbbbbbbb","bBBbbbbb","bbbbbbbb","bbbbbBBb","bbbbbbbb","bBBbbbbb","bbbbbbbb","bbbbBBbb"],["bbbbbbbb","bbBBbbbb","bbbbbbbb","bbbbbbBB","bbbbbbbb","bbBBbbbb","bbbbbbbb","bbbbbBBb"]]},
+ {id:'zand',name:'Zand',t:'g',need:0,cost:1,spr:["yyyyyyyy","yyYyyyyy","yyyyyyYy","yyyyyyyy","yYyyyyyy","yyyyYyyy","yyyyyyyy","yyYyyyYy"]},
+ {id:'bloem',name:'Bloem',t:'o',need:0,cost:1,spr:["........","...rr...","..rlr...","...rr...","....e...","..e.e...","...ee...","....e..."]},
+ {id:'boom',name:'Boom',t:'o',need:10,cost:2,spr:["..eeee..",".eeEeee.","eeeeeEee","eEeeeeee",".eeeeee.","...nn...","...nn...","..NnnN.."]},
+ {id:'pad',name:'Pad',t:'g',need:20,cost:1,spr:["ssssSsss","sssSssss","SSSsssSS","sssSSsss","ssssssSs","SssssSss","sSSSSsss","ssssssss"]},
+ {id:'hek',name:'Hek',t:'o',need:30,cost:1,spr:["........","n..n..n.","nnnnnnnn","n..n..n.","nnnnnnnn","n..n..n.","n..n..n.","........"]},
+ {id:'huis',name:'Huis',t:'o',need:45,cost:4,spr:["...RR...","..RRRR..",".RRRRRR.","RRRRRRRR",".wwwwww.",".wcwwnw.",".wwwwnw.",".wwwwnw."]},
+ {id:'kat',name:'Kat',t:'o',need:60,cost:3,anim:1,spr:["........",".o..o...",".oooo...",".okok...",".oooo..o","..oooo.o","..ooooo.","..o..o.."]},
+ {id:'vis',name:'Vis',t:'o',need:80,cost:2,anim:1,water:1,spr:["........","........","..ooo..o",".okooooo",".oooooo.","..ooo..o","........","........"]},
+ {id:'hond',name:'Hond',t:'o',need:100,cost:3,anim:1,spr:[".N....N.",".NnnnnN.",".nknnkn.",".nnkknn.","..nnnn..",".nnnnnn.",".nnnnnn.",".n.nn.n."]},
+ {id:'kip',name:'Kip',t:'o',need:125,cost:3,anim:1,spr:["..r.....",".www....",".wkwl...",".www....","..wwwww.","..wwwww.","...www..","...l.l.."]},
+ {id:'boot',name:'Boot',t:'o',need:150,cost:4,water:1,spr:["...w....","...ww...","...www..","...wwww.","...n....","nnnnnnnn",".NnnnnN.","..NNNN.."]},
+ {id:'kasteel',name:'Kasteel',t:'o',need:180,cost:8,spr:["s.s..s.s","sss..sss","ssssssss","sSssssSs","ssssssss","sssSSsss","sssSSsss","sssSSsss"]},
+ {id:'vuurtoren',name:'Vuurtoren',t:'o',need:220,cost:6,spr:["...ll...","..kllk..","...rr...","...ww...","..rrrr..","..wwww..","..rrrr..",".SSSSSS."]},
+ {id:'regenboog',name:'Regenboog',t:'o',need:270,cost:6,spr:["..rrrr..",".roooor.","rollllor","rolvvlor","rolv.vlo","rov..vor","rov..vor","........"]},
+ {id:'draak',name:'Draak',t:'o',need:330,cost:8,anim:1,spr:["......vv",".....vkv","v...vvvv","vv.vvvv.",".vvvvvv.",".vvlvv..","..v..v..","........"]},
+ {id:'eenhoorn',name:'Eenhoorn',t:'o',need:400,cost:10,anim:1,spr:["......l.",".....wl.",".....ww.","....wkw.","wwwwwww.","pwwwww..",".wwwww..",".w.w.w.."]},
+];
+const TMAP={};TILES.forEach(t=>TMAP[t.id]=t);
+const sprOf=id=>TMAP[id]?(TMAP[id].spr||TMAP[id].frames[0]):SPR[id];
+const ICACHE={};
+function iconURL(id,bg){const k=id+(bg||'');if(ICACHE[k])return ICACHE[k];
+  const c=document.createElement('canvas');c.width=8;c.height=8;const x=c.getContext('2d');
+  if(bg)drawSprite(x,sprOf(bg),0,0);drawSprite(x,sprOf(id),0,0);return ICACHE[k]=c.toDataURL()}
+const img=(id,cls='',bg)=>`<img class="pix ${cls}" src="${iconURL(id,bg)}" alt="">`;
+const AVATARS=['kat','hond','kip','vis','draak','eenhoorn','boom','bloem'];
+
+/* ---------- world ---------- */
+const COLS=10,ROWS=12;
+function newWorld(){const g=Array(COLS*ROWS).fill('gras'),o=Array(COLS*ROWS).fill(null);
+  [[6,8],[7,8],[6,9],[7,9],[8,9],[7,10]].forEach(([x,y])=>g[y*COLS+x]='water');
+  o[3*COLS+2]='bloem';o[5*COLS+4]='bloem';return{g,o}}
+function drawWorld(ctx,w,frame){
+  ctx.clearRect(0,0,COLS*8,ROWS*8);
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const i=y*COLS+x,T=TMAP[w.g[i]]||TMAP.gras;
+    drawSprite(ctx,T.frames?T.frames[(frame+x)%2]:T.spr,x*8,y*8)}
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const id=w.o[y*COLS+x];if(!id||!TMAP[id])continue;const O=TMAP[id];
+    drawSprite(ctx,O.spr,x*8,y*8-(O.anim&&(frame+x+y)%2?1:0))}
+}
+
+/* ---------- curriculum: reading ---------- */
+const L_LEVELS=[
+ {n:'Start',g:['i','k','m','s']},
+ {n:'Kern 1',g:['p','aa','r','e','v']},
+ {n:'Kern 2',g:['n','t','ee','b','oo']},
+ {n:'Kern 3',g:['d','oe','z','ij','h']},
+ {n:'Kern 4',g:['w','o','a','u']},
+ {n:'Kern 5',g:['eu','ie','l','ou','uu']},
+ {n:'Kern 6',g:['g','ui','f','ei','j','au','ch']},
+ {n:'Kern 7',g:['ng','nk','sch']},
+ {n:'Kern 8',g:['c','x','y']},
+ {n:'Kern 9',g:[]},{n:'Kern 10',g:[]},{n:'Kern 11',g:[]},{n:'Afsluiting',g:[]}];
+const GLIST=['sch','aa','ee','oo','uu','ie','oe','eu','ui','ij','ei','ou','au','ch','ng','nk'];
+function splitG(w){const r=[];let i=0;while(i<w.length){const m=GLIST.find(g=>w.startsWith(g,i))||w[i];r.push(m);i+=m.length}return r}
+const GLEVEL={};L_LEVELS.forEach((l,i)=>l.g.forEach(g=>GLEVEL[g]=i));
+const WORDSRC=`vis🐟 kip🐔 aap🐒 kaas🧀 raam🪟 vaas🏺 kaars🕯️ kers🍒
+maan🌙 roos🌹 peer🍐 pen🖊️ boom🌳 been🦵 boot⛵ noot🥜 ster⭐ tent⛺ oor👂 beer🐻 peen🥕 taart🎂 kaart🗺️ spin🕷️ pet🧢
+doos📦 hoed🎩 voet🦶 boek📕 koe🐄 ijs🍦 zeep🧼 eend🦆 bed🛏️ zee🌊 bij🐝 haai🦈 paard🐴 soep🍲 brood🍞 haan🐓
+hond🐕 kat🐱 bus🚌 sok🧦 vos🦊 mok☕ web🕸️ tas👜 rups🐛 hart❤️ pan🍳 krab🦀 zon☀️ hand✋
+wolk☁️ bal⚽ melk🥛 mier🐜 lamp💡 slak🐌 bloem🌸 klok🕰️ bel🔔 vuur🔥 neus👃 deur🚪
+huis🏠 muis🐭 uil🦉 ui🧅 ei🥚 geit🐐 fiets🚲 trein🚂 jas🧥 duim👍 friet🍟 druif🍇 oog👁️
+slang🐍 ring💍 bank🛋️ schaap🐑 school🏫 schaar✂️
+*kikker🐸 *appel🍎 *banaan🍌 *tomaat🍅 *robot🤖 *raket🚀 *zebra🦓 *konijn🐰 *vlinder🦋 *varken🐷 *egel🦔 *giraf🦒 *olifant🐘 *tijger🐯 *auto🚗 *sleutel🔑 *regen🌧️ *koning👑
+taxi🚕 *cactus🌵 *citroen🍋 *yoyo🪀`;
+const WORDS=WORDSRC.split(/\s+/).filter(Boolean).map(tok=>{const m=tok.match(/^(\*?)([a-z]+)(.+)$/);const g=splitG(m[2]);
+  let lvl=Math.max(...g.map(x=>GLEVEL[x]??99));if(m[1])lvl=Math.max(lvl,7);return{w:m[2],e:m[3],g,lvl}}).filter(w=>w.lvl<99);
+const NOPIC=['ik','is','kim','mis','mik','sim','pim','een','zie','daar','wat','ook','nee','ja','niet','maar'].map(w=>{const g=splitG(w);return{w,g,lvl:Math.max(...g.map(x=>GLEVEL[x]??99))}});
+function lKnown(lv){const s=new Set();for(let i=0;i<=lv;i++)L_LEVELS[i].g.forEach(g=>s.add(g));return s}
+function lFocus(lv){for(let i=lv;i>=0;i--)if(L_LEVELS[i].g.length)return L_LEVELS[i].g;return[]}
+
+/* ---------- curriculum: math ---------- */
+const R_BLOK=[
+ {d:'getallen t/m 10, zien zonder tellen, splitsen, hele uren',t:['flits','tellen','splits','klokHeel']},
+ {d:'tellen t/m 20, buurgetallen, splitsen van 4, 5 en 6',t:['tellen','buur','splits','flits']},
+ {d:'getallen t/m 30, splitsen t/m 9, halve uren',t:['buur','splits','klokHalf','tellen']},
+ {d:'getallen t/m 50, +1/+2-sommen, min, geld t/m €10',t:['plus12','verdwijn','geld','buur']},
+ {d:'getallen t/m 100, splitsen van 10, tientallen, uur later',t:['splits10','tiental','uurLater','buur']},
+ {d:'5-sommen, 10 + eenheden, verdwijnsommen',t:['plus5','plus10','verdwijn','tiental']},
+ {d:'alle splitsingen t/m 10, 10-sommen, hoeveel uur later',t:['splitsAll','tienSom','uurLater','tiental']},
+ {d:'getallenlijn t/m 100, sommen t/m 20, geld t/m €20',t:['getallenlijn','plusmin10','kleineSom','geld']},
+ {d:'vlot rekenen t/m 10, vier sommen bij een splitsing',t:['plusmin10','vierSommen','kleineSom','getallenlijn']}];
+const MAXN=[10,20,30,50,100,100,100,100,100];
+const SKILL={beginklank:'Eerste klank',letterplaatje:'Letter herkennen',woordplaatje:'Woord lezen',hoorwoord:'Woord herkennen',spellen:'Woord bouwen (schrijven)',zin:'Zin lezen',
+ flits:'Zien zonder tellen',tellen:'Tellen',buur:'Buurgetallen',splits:'Splitsen',klokHeel:'Klok: hele uren',klokHalf:'Klok: halve uren',plus12:'+1 en +2 sommen',
+ verdwijn:'Verdwijnsommen (min)',geld:'Geld',splits10:'Splitsen van 10',tiental:'Tientallen en eenheden',uurLater:'Uur later / vroeger',plus5:'5-sommen',
+ plus10:'10 + eenheden',splitsAll:'Alle splitsingen',tienSom:'10-sommen',getallenlijn:'Getallenlijn',plusmin10:'Sommen t/m 10',kleineSom:'Via de kleine som',vierSommen:'Vier sommen'};
+
+/* ---------- exercise builders ---------- */
+let RECENT=[];
+function fresh(list){const f=list.filter(w=>!RECENT.includes(w.w));const w=pick(f.length?f:list);RECENT.push(w.w);if(RECENT.length>8)RECENT.shift();return w}
+function mk(o){const all=shuffle([{...o.correct,ok:1},...o.wrong]);
+  return{kind:'choice',key:o.key,lk:o.lk,replay:o.replay,prompt:o.prompt,vis:o.vis,hint:o.hint,hintHTML:o.hintHTML,optCls:o.optCls||'',one:o.one,opts:all,ans:all.findIndex(x=>x.ok),tries:0}}
+const PICON={beginklank:'👂',letterplaatje:'🔤',woordplaatje:'👀',hoorwoord:'🔊',spellen:'✏️',zin:'📖',klokHeel:'🕐',klokHalf:'🕐',uurLater:'🕐',geld:'💶'};
+const slotsHTML=(g,fill)=>`<div class="slots mini">${g.map((x,i)=>i===0?'<div class="slot q">?</div>':`<div class="slot hintfill">${fill?x:''}</div>`).join('')}</div>`;
+function numOpts(ans,lo,hi,steps=[1,2,-1,-2]){const s=new Set();for(const d of shuffle(steps)){const v=ans+d;if(v>=lo&&v<=hi&&v!==ans)s.add(v);if(s.size>=2)break}
+  let guard=0;while(s.size<2&&guard++<50){const v=R(lo,hi);if(v!==ans)s.add(v)}return[...s].slice(0,2)}
+const nOpt=v=>({html:String(v)});
+const SPEAKER='<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M3 9h4l5-4v14l-5-4H3z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="square"/></svg>';
+
+const LG={
+ beginklank(L,known,focus){
+  let c=WORDS.filter(w=>known.has(w.g[0]));const f=c.filter(w=>focus.has(w.g[0]));if(f.length&&Math.random()<.7)c=f;
+  const w=fresh(c),first=w.g[0];
+  const others=shuffle([...known].filter(g=>g!==first&&!['ng','nk','ch'].includes(g))).slice(0,2);
+  return mk({key:'beginklank',lk:'L'+L,prompt:'Hoe begint het?',vis:`<div class="emo">${w.e}</div><div id="vh">${slotsHTML(w.g,false)}</div>`,
+   hintHTML:slotsHTML(w.g,true),correct:{html:first},wrong:others.map(g=>({html:g})),optCls:'letter'})},
+ letterplaatje(L,known,focus){
+  let cand=[...known].filter(g=>WORDS.some(w=>w.g[0]===g));const f=cand.filter(g=>focus.has(g));if(f.length&&Math.random()<.7)cand=f;
+  const g=pick(cand),right=fresh(WORDS.filter(w=>w.g[0]===g));
+  const wrong=shuffle(WORDS.filter(w=>w.w[0]!==g[0]&&w.e!==right.e)).slice(0,2);
+  return mk({key:'letterplaatje',lk:'L'+L,prompt:'Welk plaatje begint zo?',vis:`<div class="bigletter">${g}…</div>`,
+   correct:{html:right.e,label:right.w},wrong:wrong.map(w=>({html:w.e,label:w.w})),optCls:'emo-o'})},
+ woordplaatje(L,known,focus,pw){
+  if(pw.length<3)return LG.beginklank(L,known,focus);
+  let c=pw;const f=pw.filter(w=>w.g.some(g=>focus.has(g)));if(f.length&&Math.random()<.7)c=f;
+  const right=fresh(c);const wrong=shuffle(pw.filter(w=>w.e!==right.e)).slice(0,2);
+  return mk({key:'woordplaatje',lk:'L'+L,prompt:'Lees. Welk plaatje is het?',vis:`<div class="bigword">${right.w}</div>`,
+   correct:{html:right.e},wrong:wrong.map(w=>({html:w.e})),optCls:'emo-o'})},
+ hoorwoord(L,known,focus,pw){
+  const pool=[...pw,...NOPIC.filter(w=>w.lvl<=L)];if(pool.length<3)return LG.beginklank(L,known,focus);
+  let c=pool;const f=pool.filter(w=>w.g.some(g=>focus.has(g)));if(f.length&&Math.random()<.7)c=f;
+  const right=fresh(c);let sim=pool.filter(w=>w.w!==right.w&&(w.g[0]===right.g[0]||Math.abs(w.w.length-right.w.length)<=1));
+  if(sim.length<2)sim=pool.filter(w=>w.w!==right.w);const wrong=shuffle(sim).slice(0,2);
+  return mk({key:'hoorwoord',lk:'L'+L,replay:right.w,prompt:'Welk woord hoor je?',
+   vis:`<button class="btn gold speakbig" data-act="replay" aria-label="Luister nog eens">${SPEAKER}</button>`,
+   correct:{html:right.w},wrong:wrong.map(w=>({html:w.w})),optCls:'word'})},
+ spellen(L,known,focus,pw){
+  const maxG=L<7?4:6;const pool=pw.filter(w=>w.g.length<=maxG);if(pool.length<2)return LG.beginklank(L,known,focus);
+  let c=pool;const f=pool.filter(w=>w.g.some(g=>focus.has(g)));if(f.length&&Math.random()<.7)c=f;
+  const w=fresh(c);const extra=shuffle([...known].filter(g=>!w.g.includes(g)&&!['ng','nk'].includes(g))).slice(0,2);
+  return{kind:'spell',key:'spellen',lk:'L'+L,prompt:'Maak het woord',word:w,pos:0,
+   tiles:shuffle([...w.g,...extra]).map(g=>({g,used:false})),tries:0}},
+ zin(L,known,focus,pw){
+  const right=fresh(pw),other=pick(pw.filter(w=>w.e!==right.e));const t=pick(['ik zie een #.','dit is een #.','ik heb een #.','daar is een #.']);
+  return mk({key:'zin',lk:'L'+L,prompt:'Welke zin past?',vis:`<div class="emo">${right.e}</div>`,
+   correct:{html:t.replace('#',right.w)},wrong:[{html:t.replace('#',other.w)}],optCls:'sent',one:true})},
+};
+function genL(lv){
+  const L=Math.random()<.35?R(0,lv):lv;const known=lKnown(L),focus=new Set(lFocus(L));const pw=WORDS.filter(w=>w.lvl<=L);
+  let w8;
+  if(L===0)w8={beginklank:4,letterplaatje:3,hoorwoord:2};
+  else if(L<=2)w8={beginklank:2,letterplaatje:2,woordplaatje:3,hoorwoord:2,spellen:2};
+  else if(L<=6)w8={beginklank:1,letterplaatje:1,woordplaatje:3,hoorwoord:2,spellen:3};
+  else w8={woordplaatje:2,hoorwoord:1,spellen:3,zin:3};
+  return LG[wpick(w8)](L,known,focus,pw);
+}
+
+/* math visuals */
+function tenFrame(a,b=0){let h='<div class="tf">';for(let i=0;i<10;i++)h+=`<i class="${i<a?'a':i<a+b?'b':''}"></i>`;return h+'</div>'}
+const ITEMS=[['🍎','appels'],['⭐','sterren'],['🐞','lieveheersbeestjes'],['🍓','aardbeien'],['🚗',"auto's"],['🐟','visjes'],['🎈','ballonnen']];
+function itemsHTML(e,n,gone=0){let h='<div class="items">';for(let i=0;i<n;i+=5){h+='<div class="grp">';for(let j=i;j<Math.min(n,i+5);j++)h+=`<span class="${j>=n-gone?'gone':''}">${e}</span>`;h+='</div>'}return h+'</div>'}
+function houseHTML(T,a,b){return`<div class="house"><div class="roof">${T}</div><div class="rooms"><div class="${a==='?'?'q':''}">${a}</div><div class="${b==='?'?'q':''}">${b}</div></div></div>`}
+function clockSVG(h,m){const ha=((h%12)+m/60)*30,ma=m*6;let t='';for(let i=1;i<=12;i++){const a=i*30*Math.PI/180;t+=`<text x="${50+36*Math.sin(a)}" y="${50-36*Math.cos(a)+4}" text-anchor="middle" font-size="10" font-weight="700" fill="#1b2033" font-family="Andika,sans-serif">${i}</text>`}
+  return`<svg class="clock" viewBox="0 0 100 100"><circle cx="50" cy="50" r="47" fill="#fff" stroke="#1b2033" stroke-width="4"/>${t}
+  <line x1="50" y1="50" x2="${50+22*Math.sin(ha*Math.PI/180)}" y2="${50-22*Math.cos(ha*Math.PI/180)}" stroke="#e2581b" stroke-width="6" stroke-linecap="round"/>
+  <line x1="50" y1="50" x2="${50+33*Math.sin(ma*Math.PI/180)}" y2="${50-33*Math.cos(ma*Math.PI/180)}" stroke="#2350d8" stroke-width="3.5" stroke-linecap="round"/>
+  <circle cx="50" cy="50" r="4" fill="#1b2033"/></svg>`}
+const hourLbl=(h,m)=>m===0?`${h} uur`:`half ${h%12+1}`;
+const wrapH=h=>((h-1)%12+12)%12+1;
+function moneyHTML(list){return'<div class="coins">'+list.map(v=>v<5?`<div class="coin c${v}">€${v}</div>`:`<div class="note n${v}">€${v}</div>`).join('')+'</div>'}
+function rodsHTML(n){const t=Math.floor(n/10),u=n%10;let h='<div class="rods">';for(let i=0;i<t;i++)h+='<div class="rod">'+'<i></i>'.repeat(10)+'</div>';
+  if(u)h+='<div class="units">'+'<i></i>'.repeat(u)+'</div>';return h+'</div>'}
+function numlineSVG(v){let s='<svg class="numline" viewBox="0 0 320 70"><line x1="10" y1="40" x2="310" y2="40" stroke="#1b2033" stroke-width="3"/>';
+  for(let i=0;i<=100;i+=5){const x=10+i*3;s+=`<line x1="${x}" y1="${i%10?34:28}" x2="${x}" y2="${i%10?46:52}" stroke="#1b2033" stroke-width="${i%10?1.5:2.5}"/>`;
+   if(i%10===0)s+=`<text x="${x}" y="66" text-anchor="middle" font-size="${i%50?9:12}" font-weight="700" fill="#1b2033" font-family="Andika,sans-serif">${i}</text>`}
+  const x=10+v*3;return s+`<path d="M${x} 32 l-7 -14 h14z" fill="#e2581b" stroke="#1b2033" stroke-width="1.5"/></svg>`}
+const sumHTML=(t,cls='')=>`<div class="sum ${cls}">${t.replace('?','<span class="q">?</span>')}</div>`;
+
+const RG={
+ flits(B){const n=R(1,10);return mk({key:'flits',lk:'R'+B,say:'Hoeveel stippen zie je? Probeer het zonder tellen.',prompt:'Hoeveel stippen?',vis:tenFrame(Math.min(n,5),Math.max(0,n-5)),correct:nOpt(n),wrong:numOpts(n,1,10).map(nOpt),optCls:'num'})},
+ tellen(B){if(B>=2){const n=R(11,30);return mk({key:'tellen',lk:'R'+B,say:'Hoeveel blokjes zijn het?',prompt:'Hoeveel blokjes?',vis:rodsHTML(n),correct:nOpt(n),wrong:numOpts(n,10,30,[1,-1,10,-10]).map(nOpt),optCls:'num'})}
+  const n=B===0?R(3,10):R(8,20);const[e,name]=pick(ITEMS);
+  return mk({key:'tellen',lk:'R'+B,say:`Hoeveel ${name} zie je?`,prompt:'Tel maar!',vis:itemsHTML(e,n),correct:nOpt(n),wrong:numOpts(n,1,20).map(nOpt),optCls:'num'})},
+ buur(B){const max=MAXN[B],n=R(1,max-1),na=Math.random()<.5,ans=na?n+1:n-1;
+  return mk({key:'buur',lk:'R'+B,say:na?`Welk getal komt na ${n}?`:`Welk getal komt voor ${n}?`,prompt:na?`Wat komt na ${n}?`:`Wat komt voor ${n}?`,
+   vis:sumHTML(na?`${n}  ?`:`?  ${n}`),correct:nOpt(ans),wrong:numOpts(ans,0,max,[1,2,-1,-2,10,-10]).map(nOpt),optCls:'num'})},
+ splits(B,T){T=T??(B===0?R(3,6):B===1?R(4,6):B===2?R(2,9):R(2,10));const a=R(B<=1?1:0,B<=1?T-1:T),b=T-a,left=Math.random()<.5;
+  return mk({key:B===4&&T===10?'splits10':B>=6?'splitsAll':'splits',lk:'R'+B,say:`Splits ${T}. ${left?b:a} en hoeveel?`,prompt:`Splits ${T}`,
+   vis:houseHTML(T,left?'?':a,left?b:'?'),correct:nOpt(left?a:b),wrong:numOpts(left?a:b,0,T).map(nOpt),optCls:'num'})},
+ splits10(B){return RG.splits(B,10)},
+ splitsAll(B){return RG.splits(B,R(2,10))},
+ klokHeel(B){const h=R(1,12);const w=numOpts(h,1,12,[1,-1,2,-2,3]).map(x=>({html:`${x} uur`}));
+  return mk({key:'klokHeel',lk:'R'+B,say:'Hoe laat is het?',prompt:'Hoe laat is het?',vis:clockSVG(h,0),correct:{html:`${h} uur`},wrong:w,optCls:'txt'})},
+ klokHalf(B){const h=R(1,12),m=Math.random()<.6?30:0;const lbl=hourLbl(h,m);const s=new Set([lbl]);
+  s.add(hourLbl(m?wrapH(h+1):h,m?0:30));s.add(hourLbl(wrapH(h+(Math.random()<.5?1:-1)),m));let g=0;while(s.size<3&&g++<20)s.add(hourLbl(R(1,12),pick([0,30])));
+  return mk({key:'klokHalf',lk:'R'+B,say:'Hoe laat is het?',prompt:'Hoe laat is het?',vis:clockSVG(h,m),correct:{html:lbl},wrong:[...s].filter(x=>x!==lbl).slice(0,2).map(x=>({html:x})),optCls:'txt'})},
+ plus12(B){const k=R(1,2),a=R(1,10-k);return mk({key:'plus12',lk:'R'+B,say:`${a} plus ${k}. Hoeveel is dat?`,prompt:'Plus',vis:tenFrame(a,k)+sumHTML(`${a} + ${k} = ?`,'sm'),correct:nOpt(a+k),wrong:numOpts(a+k,0,10).map(nOpt),optCls:'num'})},
+ verdwijn(B){const n=R(3,10),k=R(1,n-1);const[e,name]=pick(ITEMS);
+  return mk({key:'verdwijn',lk:'R'+B,say:`Er zijn ${n} ${name}. Er gaan er ${k} weg. Hoeveel blijven er over?`,prompt:'Hoeveel blijven er over?',
+   vis:itemsHTML(e,n,k)+sumHTML(`${n} − ${k} = ?`,'sm'),correct:nOpt(n-k),wrong:numOpts(n-k,0,10).map(nOpt),optCls:'num'})},
+ geld(B){const cap=B>=7?20:10,den=cap===20?[1,2,5,10]:[1,2,5];let list,sum,g=0;
+  do{list=[];const c=R(2,4);for(let i=0;i<c;i++)list.push(pick(den));sum=list.reduce((a,b)=>a+b,0)}while(sum>cap&&g++<50);
+  list.sort((a,b)=>b-a);return mk({key:'geld',lk:'R'+B,say:'Hoeveel euro is dit samen?',prompt:'Hoeveel euro?',vis:moneyHTML(list),
+   correct:{html:'€'+sum},wrong:numOpts(sum,1,cap).map(v=>({html:'€'+v})),optCls:'num'})},
+ tiental(B){const n=R(11,99);return mk({key:'tiental',lk:'R'+B,say:'Hoeveel blokjes zijn het? Tel eerst de staven van tien.',prompt:'Tientallen en eenheden',vis:rodsHTML(n),
+   correct:nOpt(n),wrong:numOpts(n,10,99,[1,-1,10,-10]).map(nOpt),optCls:'num'})},
+ uurLater(B){const h=R(1,12),k=R(1,3),later=B>=6||Math.random()<.6,ans=wrapH(later?h+k:h-k);
+  return mk({key:'uurLater',lk:'R'+B,say:`Het is ${h} uur. Hoe laat is het ${k} uur ${later?'later':'vroeger'}?`,prompt:`${k} uur ${later?'later':'vroeger'}?`,
+   vis:clockSVG(h,0),correct:{html:`${ans} uur`},wrong:numOpts(ans,1,12,[1,-1,2,-2]).map(x=>({html:`${x} uur`})),optCls:'txt'})},
+ plus5(B){const x=R(1,5),first=Math.random()<.5;return mk({key:'plus5',lk:'R'+B,say:first?`5 plus ${x}`:`${x} plus 5`,prompt:'5-som',
+   vis:tenFrame(first?5:x,first?x:5)+sumHTML(first?`5 + ${x} = ?`:`${x} + 5 = ?`,'sm'),correct:nOpt(5+x),wrong:numOpts(5+x,1,10).map(nOpt),optCls:'num'})},
+ plus10(B){const x=R(1,9);return mk({key:'plus10',lk:'R'+B,say:`10 plus ${x}`,prompt:'10 + eenheden',vis:rodsHTML(10+x)+sumHTML(`10 + ${x} = ?`,'sm'),
+   correct:nOpt(10+x),wrong:numOpts(10+x,10,20).map(nOpt),optCls:'num'})},
+ tienSom(B){const a=R(1,9);if(Math.random()<.5)return mk({key:'tienSom',lk:'R'+B,say:`${a} plus hoeveel is 10?`,prompt:'Maak 10',vis:tenFrame(a)+sumHTML(`${a} + ? = 10`,'sm'),correct:nOpt(10-a),wrong:numOpts(10-a,0,10).map(nOpt),optCls:'num'});
+  return mk({key:'tienSom',lk:'R'+B,say:`10 min ${a}`,prompt:'10-som',vis:sumHTML(`10 − ${a} = ?`),correct:nOpt(10-a),wrong:numOpts(10-a,0,10).map(nOpt),optCls:'num'})},
+ getallenlijn(B){const v=B===7?R(1,19)*5:R(3,97);return mk({key:'getallenlijn',lk:'R'+B,say:'Welk getal wijst de pijl aan?',prompt:'Welk getal is het?',vis:numlineSVG(v),
+   correct:nOpt(v),wrong:numOpts(v,0,100,B===7?[5,-5,10,-10]:[1,-1,10,-10,2]).map(nOpt),optCls:'num'})},
+ plusmin10(B){let t,a,b,ans,sp;if(Math.random()<.5){a=R(0,10);b=R(0,10-a);ans=a+b;t=`${a} + ${b} = ?`;sp=`${a} plus ${b}`}else{a=R(1,10);b=R(0,a);ans=a-b;t=`${a} − ${b} = ?`;sp=`${a} min ${b}`}
+  return mk({key:'plusmin10',lk:'R'+B,say:sp,prompt:'Reken uit',vis:sumHTML(t),correct:nOpt(ans),wrong:numOpts(ans,0,10).map(nOpt),optCls:'num'})},
+ kleineSom(B){const a=R(1,8),b=R(1,9-a);if(Math.random()<.5)return mk({key:'kleineSom',lk:'R'+B,say:`${10+a} plus ${b}`,prompt:'Reken uit',vis:sumHTML(`${10+a} + ${b} = ?`),
+   hint:`Kleine som: ${a} + ${b} = ${a+b}`,correct:nOpt(10+a+b),wrong:numOpts(10+a+b,10,20,[1,-1,10,-10]).map(nOpt),optCls:'num'});
+  return mk({key:'kleineSom',lk:'R'+B,say:`${10+a+b} min ${b}`,prompt:'Reken uit',vis:sumHTML(`${10+a+b} − ${b} = ?`),hint:`Kleine som: ${a+b} − ${b} = ${a}`,
+   correct:nOpt(10+a),wrong:numOpts(10+a,10,20,[1,-1,10,-10]).map(nOpt),optCls:'num'})},
+ vierSommen(B){const T=R(4,10),a=R(1,T-1),b=T-a;const q=pick([[`${a} + ${b} = ?`,T,`${a} plus ${b}`],[`${b} + ${a} = ?`,T,`${b} plus ${a}`],[`${T} − ${a} = ?`,b,`${T} min ${a}`],[`${T} − ${b} = ?`,a,`${T} min ${b}`]]);
+  return mk({key:'vierSommen',lk:'R'+B,say:q[2],prompt:'Vier sommen bij het huis',vis:houseHTML(T,a,b)+sumHTML(q[0],'sm'),correct:nOpt(q[1]),wrong:numOpts(q[1],0,10).map(nOpt),optCls:'num'})},
+};
+function genR(b){const B=Math.random()<.35?R(0,b):b;return RG[pick(R_BLOK[B].t)](B)}
+
+/* ---------- kid model ---------- */
+function newKid(name,avatar,lees,reken){return{id:'k'+Date.now().toString(36)+R(100,999),name,avatar,lees,reken,perRound:8,playMin:2,
+  stars:0,bricks:6,credit:0,world:newWorld(),stats:{},lvl:{},sessions:[],streak:0,lastDay:'',created:today()}}
+function nextUnlock(k){return TILES.find(t=>t.need>k.stars)}
+
+/* ---------- navigation ---------- */
+let SCREEN='';
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.hidden=s.id!==id);SCREEN=id;window.scrollTo(0,0)}
+function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),1800)}
+function start(){load();if(!DB.kids.length)renderWelcome();else if(DB.kids.length===1){DB.cur=DB.kids[0].id;renderHome()}else renderKids()}
+
+/* ---------- welcome / kids ---------- */
+function renderWelcome(){const s=$('#s-welcome');
+  s.innerHTML=`<div class="hero"><h1>Pixeldorp</h1><p class="sub">Oefenen met lezen en rekenen. Bouwen aan je eigen dorp.</p></div>
+  <div class="world"><canvas class="pix" id="wel-cv" width="80" height="96"></canvas></div>
+  <div class="panel"><h3>Voor ouders</h3>
+   <p>Je kind oefent korte rondjes lezen (Veilig leren lezen, per kern) of rekenen (De wereld in getallen, per blok). Elk goed antwoord levert blokjes en sterren op. Na een rondje mag je kind een paar minuten bouwen.</p>
+   <p class="muted small">Voortgang wordt alleen op dit apparaat bewaard. Bij de oefening "Welk woord hoor je?" hoort je kind een woord: standaard de computerstem, of jouw eigen stem als je de woorden inspreekt.</p></div>
+  <button class="btn grass big" data-act="addkid">${img('kat')}<span>Kind toevoegen</span></button>`;
+  show('s-welcome');drawWorld($('#wel-cv').getContext('2d'),newWorld(),0)}
+function renderKids(){const s=$('#s-kids');
+  s.innerHTML=`<div class="hero"><h1>Pixeldorp</h1><p class="sub">Wie gaat er spelen?</p></div>
+  <div class="kids">${DB.kids.map(k=>`<button class="btn kidtile" data-act="pickkid" data-id="${k.id}">${img(k.avatar)}<span>${esc(k.name)}</span><span class="chip">${img('star')}${k.stars}</span></button>`).join('')}</div>
+  <div class="grow"></div><button class="btn ghost" data-act="parent">Ouders</button>`;show('s-kids')}
+
+/* ---------- home ---------- */
+function renderHome(greet){const k=cur();if(!k)return start();const nu=nextUnlock(k);
+  const prev=nu?([...TILES].reverse().find(t=>t.need<=k.stars)?.need||0):0;
+  const pct=nu?Math.round((k.stars-prev)/(nu.need-prev)*100):100;
+  const s=$('#s-home');
+  s.innerHTML=`<div class="row">${img(k.avatar,'','gras').replace('class="pix ','class="pix " style="width:48px;height:48px;border:3px solid var(--ink)" ')}
+   <div class="grow"><h2>${esc(k.name)}</h2><span class="muted small">${L_LEVELS[k.lees].n} · Blok ${k.reken+1}${k.streak>1?` · ${k.streak} dagen op rij`:''}</span></div>
+   <button class="btn ibtn ghost" data-act="${DB.kids.length>1?'switch':'parent'}" aria-label="${DB.kids.length>1?'Ander kind':'Ouders'}">${DB.kids.length>1?'⇄':'⚙'}</button></div>
+  <div class="row"><span class="chip">${img('star')}${k.stars}</span><span class="chip">${img('brick')}${k.bricks}</span></div>
+  <div class="world"><canvas class="pix" id="home-cv" width="80" height="96"></canvas></div>
+  ${nu?`<div class="nextbar">${img(nu.id,'',nu.water?'water':'gras')}<div class="grow"><b>Nog ${nu.need-k.stars} sterren tot: ${nu.name}</b><div class="meter"><i style="width:${pct}%"></i></div></div></div>`
+     :`<div class="nextbar">${img('eenhoorn','','gras')}<b>Je hebt alles vrijgespeeld!</b></div>`}
+  <div class="homebtns">
+   <button class="btn lees big" data-act="go" data-sub="L">${img('bloem')}<span>Lezen<small>${L_LEVELS[k.lees].n}</small></span></button>
+   <button class="btn reken big" data-act="go" data-sub="R">${img('star')}<span>Rekenen<small>Blok ${k.reken+1}</small></span></button>
+   <button class="btn grass big" data-act="build" ${k.credit>0?'':'disabled'}>${img('huis')}<span>Bouwen<small>${k.credit>0?'Speeltijd '+fmtTime(k.credit):'Oefen eerst een rondje'}</small></span></button>
+  </div>
+  ${DB.kids.length>1?'<button class="btn ghost small" data-act="parent">Ouders</button>':''}`;
+  show('s-home');drawHome()}
+let FRAME=0;
+function drawHome(){const c=$('#home-cv'),k=cur();if(c&&k)drawWorld(c.getContext('2d'),k.world,FRAME)}
+setInterval(()=>{FRAME++;if(SCREEN==='s-home')drawHome();else if(SCREEN==='s-build')drawBuild()},450);
+
+/* ---------- session ---------- */
+let S=null,EX=null;
+function startSession(sub){const k=cur();RECENT=[];S={sub,n:k.perRound,i:0,res:[],stars:0,bricks:0};nextEx()}
+function nextEx(){if(S.i>=S.n)return finish();const k=cur();EX=S.sub==='L'?genL(k.lees):genR(k.reken);renderEx();
+  const ex=EX;if(ex.replay)setTimeout(()=>{if(EX===ex)playWord(ex.replay)},350);
+  setTimeout(()=>{if(EX===ex&&SCREEN==='s-ex'&&!ex.done&&ex.tries===0&&!(ex.pos>0))document.querySelector('#s-ex .opts, #s-ex .tiles')?.classList.add('nudge')},9000)}
+function pipsHTML(){let h='';for(let i=0;i<S.n;i++){const r=S.res[i];h+=`<i class="pip ${r===2?'ok':r===1?'half':r===0?'no':i===S.i?'now':''}"></i>`}return h}
+function renderEx(){const s=$('#s-ex');
+  const icon=PICON[EX.key]||(S.sub==='R'?'🔢':'');
+  const top=`<div class="exbar"><button class="btn ibtn" data-act="quit" aria-label="Stoppen">✕</button><div class="pips">${pipsHTML()}</div></div>
+   <div class="prompt">${icon?`<span class="picon" aria-hidden="true">${icon}</span>`:''}<span>${esc(EX.prompt||'')}</span></div>`;
+  if(EX.kind==='spell'){const w=EX.word;const nextI=EX.reveal?EX.tiles.findIndex(t=>!t.used&&t.g===w.g[EX.pos]):-1;
+    s.innerHTML=top+`<div class="vis"><div class="emo">${w.e}</div><div class="slots">${w.g.map((g,i)=>`<div class="slot ${i<EX.pos?'f':''} ${i===EX.pos&&!EX.done?'q':''}">${i<EX.pos?g:''}</div>`).join('')}</div></div>
+    <div class="tiles">${EX.tiles.map((t,i)=>`<button class="btn tile ${t.used?'used':''} ${i===nextI?'reveal':''}" data-act="tile" data-i="${i}">${t.g}</button>`).join('')}</div>`}
+  else{s.innerHTML=top+`<div class="vis">${EX.vis}<div class="hint" id="hint" hidden>${esc(EX.hint||'')}</div></div>
+    <div class="opts ${EX.one?'one':''}">${EX.opts.map((o,i)=>`<button class="btn opt ${EX.optCls}" data-act="ans" data-i="${i}">${o.html}</button>`).join('')}</div>`}
+  show('s-ex')}
+function popReward(n){const d=document.createElement('div');d.className='pop';d.innerHTML=`+${n} ${img('brick')}`;document.body.appendChild(d);setTimeout(()=>d.remove(),950)}
+const PRAISE=['Goed zo!','Super!','Knap hoor!','Top!','Heel goed!','Yes!'];
+function settle(first,ok){const k=cur();
+  const st=k.stats[EX.key]||(k.stats[EX.key]={ok:0,tot:0});st.tot++;if(first)st.ok++;
+  const lv=k.lvl[EX.lk]||(k.lvl[EX.lk]={ok:0,tot:0});lv.tot++;if(first)lv.ok++;
+  const r=first?2:ok?1:0;S.res[S.i]=r;if(r){k.bricks+=r;S.bricks+=r;popReward(r)}if(first){k.stars++;S.stars++}
+  save();S.i++}
+function answer(i,btn){if(EX.done)return;
+  document.querySelector('#s-ex .nudge')?.classList.remove('nudge');
+  if(i===EX.ans){EX.done=true;btn.classList.add('good');SFX.ok();const first=EX.tries===0;settle(first,true);setTimeout(nextEx,1100)}
+  else{EX.tries++;btn.classList.add('wrong','shake');btn.disabled=true;SFX.bad();showHint();
+    if(EX.tries>=2){EX.done=true;const b=document.querySelectorAll('.opt')[EX.ans];b.classList.add('reveal');settle(false,false);setTimeout(nextEx,2300)}}}
+function showHint(){if(EX.hint)$('#hint').hidden=false;if(EX.hintHTML&&$('#vh'))$('#vh').innerHTML=EX.hintHTML;
+  document.querySelectorAll('#s-ex .opt').forEach((b,i)=>{const o=EX.opts[i];if(o.label&&!b.querySelector('.olabel'))b.insertAdjacentHTML('beforeend',`<span class="olabel">${esc(o.label)}</span>`)})}
+function tileTap(i,btn){if(EX.done)return;const t=EX.tiles[i];if(t.used)return;const need=EX.word.g[EX.pos];
+  if(t.g===need){t.used=true;EX.pos++;EX.reveal=false;SFX.place();
+    if(EX.pos===EX.word.g.length){EX.done=true;SFX.ok();settle(EX.tries===0,true);renderEx();setTimeout(nextEx,1400)}else renderEx()}
+  else{EX.tries++;SFX.bad();
+    if(EX.tries>=4){EX.done=true;EX.pos=EX.word.g.length;EX.tiles.forEach(t=>t.used=true);settle(false,false);renderEx();setTimeout(nextEx,2400);return}
+    if(EX.tries>=2){EX.reveal=true;renderEx();return}
+    btn.classList.add('wrong','shake');setTimeout(()=>btn.classList.remove('shake','wrong'),400)}}
+function finish(){const k=cur();const before=k.stars-S.stars;let bonus=0;const perfect=S.res.every(r=>r===2);
+  if(perfect){bonus=3;k.bricks+=bonus;S.bricks+=bonus}
+  const cap=k.playMin*60*3;const add=k.playMin*60;k.credit=Math.min(cap,k.credit+add);
+  const t=today();if(k.lastDay!==t){const y=new Date();y.setDate(y.getDate()-1);const ys=y.getFullYear()+'-'+(y.getMonth()+1)+'-'+y.getDate();k.streak=k.lastDay===ys?k.streak+1:1;k.lastDay=t}
+  k.sessions.push({d:t,sub:S.sub,n:S.n,first:S.res.filter(r=>r===2).length,lvl:S.sub==='L'?k.lees:k.reken});if(k.sessions.length>60)k.sessions.shift();
+  save();const fresh=TILES.filter(x=>x.need>before&&x.need<=k.stars);
+  const s=$('#s-done');
+  s.innerHTML=`<img class="pix trophy" src="${iconURL('trophy')}" alt=""><h1>${perfect?'Foutloos!':'Goed gedaan!'}</h1>
+   <div class="rewards"><span class="chip">${img('star')}+${S.stars}</span><span class="chip">${img('brick')}+${S.bricks}</span></div>
+   ${fresh.map(x=>`<div class="unlock">${img(x.id,'',x.water?'water':'gras')}<div style="text-align:left"><h3>Nieuw!</h3><b>${x.name}</b></div></div>`).join('')}
+   <p class="muted"><b>Speeltijd: ${fmtTime(k.credit)}</b></p>
+   <button class="btn grass big" data-act="build">${img('huis')}<span>Bouwen!</span></button>
+   <div class="two" style="width:100%"><button class="btn" data-act="go" data-sub="${S.sub}">Nog een rondje</button><button class="btn" data-act="home">Naar huis</button></div>`;
+  show('s-done');SFX.win()}
+
+/* ---------- builder ---------- */
+let BT={tool:'gras',int:null,paint:false,last:-1};
+function renderBuild(){const k=cur();if(k.credit<=0)return renderHome();const s=$('#s-build');
+  s.innerHTML=`<div class="bhud"><button class="btn" data-act="buildstop">Klaar</button><div class="grow"></div>
+   <span class="chip" id="b-bricks">${img('brick')}${k.bricks}</span><span class="timer" id="b-timer">${fmtTime(k.credit)}</span></div>
+  <div class="bcanvas"><canvas class="pix" id="b-cv" width="80" height="96"></canvas></div>
+  <div class="palette" id="b-pal"></div>`;
+  show('s-build');renderPalette();drawBuild();
+  const cv=$('#b-cv');
+  cv.addEventListener('pointerdown',e=>{BT.paint=true;BT.last=-1;place(e)});
+  cv.addEventListener('pointermove',e=>{if(BT.paint&&TMAP[BT.tool]?.t==='g'||BT.paint&&BT.tool==='gum')place(e)});
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>cv.addEventListener(ev,()=>BT.paint=false));
+  clearInterval(BT.int);
+  BT.int=setInterval(()=>{if(document.hidden||SCREEN!=='s-build')return;k.credit--;const t=$('#b-timer');if(t){t.textContent=fmtTime(k.credit);t.classList.toggle('low',k.credit<=15)}
+    if(k.credit<=10&&k.credit>0)SFX.tick();if(k.credit%5===0)save();if(k.credit<=0)timeUp()},1000)}
+function renderPalette(){const k=cur();
+  $('#b-pal').innerHTML=[...TILES.map(t=>{const lock=k.stars<t.need;
+    return`<button class="btn tool ${lock?'locked':''} ${BT.tool===t.id?'sel':''}" data-act="tool" data-id="${t.id}">${img(t.id,'',t.t==='o'?(t.water?'water':'gras'):undefined)}<span>${t.name}</span>
+     <span class="cost">${lock?img('star')+t.need:img('brick')+t.cost}</span></button>`}),
+   `<button class="btn tool ${BT.tool==='gum'?'sel':''}" data-act="tool" data-id="gum">${img('gum')}<span>Gum</span><span class="cost">terug</span></button>`].join('')}
+function drawBuild(){const c=$('#b-cv'),k=cur();if(c&&k)drawWorld(c.getContext('2d'),k.world,FRAME)}
+function place(e){const k=cur();if(k.credit<=0)return;const cv=$('#b-cv'),r=cv.getBoundingClientRect();
+  const x=Math.floor((e.clientX-r.left)/r.width*COLS),y=Math.floor((e.clientY-r.top)/r.height*ROWS);
+  if(x<0||y<0||x>=COLS||y>=ROWS)return;const i=y*COLS+x;if(i===BT.last)return;BT.last=i;const w=k.world;
+  if(BT.tool==='gum'){if(w.o[i]){k.bricks+=TMAP[w.o[i]].cost;w.o[i]=null}else if(w.g[i]!=='gras'){k.bricks+=TMAP[w.g[i]].cost;w.g[i]='gras'}else return}
+  else{const T=TMAP[BT.tool];
+    if(T.t==='g'){if(w.g[i]===T.id)return;const O=w.o[i]&&TMAP[w.o[i]];if(O&&(!!O.water)!==(T.id==='water')){toast(O.water?'Hier staat iets dat op het water hoort.':'Haal eerst weg wat hier staat.');BT.paint=false;return}
+      if(k.bricks<T.cost){toast('Te weinig blokjes. Oefen nog een rondje!');BT.paint=false;SFX.bad();return}k.bricks-=T.cost;w.g[i]=T.id}
+    else{if(w.o[i]===T.id)return;if(T.water&&w.g[i]!=='water'){toast(`${T.name}: die moet op het water!`);SFX.bad();return}
+      if(!T.water&&w.g[i]==='water'){toast('Dat kan niet op het water.');SFX.bad();return}
+      const refund=w.o[i]?TMAP[w.o[i]].cost:0;if(k.bricks+refund<T.cost){toast('Te weinig blokjes. Oefen nog een rondje!');SFX.bad();return}
+      k.bricks+=refund-T.cost;w.o[i]=T.id}}
+  SFX.place();drawBuild();$('#b-bricks').innerHTML=img('brick')+k.bricks}
+function timeUp(){clearInterval(BT.int);save();SFX.win();
+  const o=document.createElement('div');o.className='overlay';o.innerHTML=`<div class="card"><img class="pix" style="width:72px;height:72px" src="${iconURL('trophy')}" alt=""><h2>Tijd is op!</h2><p>Je dorp is bewaard. Oefen weer een rondje om verder te bouwen.</p><button class="btn grass" data-act="home">Naar huis</button></div>`;
+  document.body.appendChild(o)}
+function stopBuild(){clearInterval(BT.int);save();renderHome()}
+
+/* ---------- parent area ---------- */
+let GATE=null,AFTER_GATE=null;
+function openGate(next){AFTER_GATE=next;const a=R(4,9),b=R(4,9);GATE=a*b;const s=$('#s-gate');
+  s.innerHTML=`<div class="row"><button class="btn" data-act="back">Terug</button></div><div class="panel"><h2>Alleen voor ouders</h2>
+   <div class="field"><label for="gate-in">Hoeveel is ${a} × ${b}?</label><input id="gate-in" type="number" inputmode="numeric" autocomplete="off"></div>
+   <button class="btn gold" data-act="gateok">Verder</button></div>`;show('s-gate');setTimeout(()=>$('#gate-in')?.focus(),50)}
+function renderParent(){const s=$('#s-parent');const vs=voices;
+  s.innerHTML=`<div class="row"><h2 class="grow">Ouderhoek</h2><button class="btn" data-act="back">Sluiten</button></div>
+  <div class="panel"><h3>Kinderen</h3>${DB.kids.length?DB.kids.map(k=>`<div class="kidrow">${img(k.avatar,'','gras')}<div class="grow"><b>${esc(k.name)}</b><br><span class="muted small">${L_LEVELS[k.lees].n} · Blok ${k.reken+1} · ${k.stars} sterren · ${k.sessions.length} rondjes</span></div>
+    <button class="btn" data-act="edit" data-id="${k.id}">Aanpassen</button></div>`).join(''):'<p class="muted">Nog geen kinderen.</p>'}
+   <button class="btn grass" data-act="newkid">Kind toevoegen</button></div>
+  <div class="panel"><h3>Woorden inspreken</h3>
+   <p class="small">Bij "Welk woord hoor je?" hoort je kind een woord. Woorden die je zelf inspreekt klinken in jouw stem; de rest zegt de computerstem.</p>
+   ${recGroups().map(g=>{const n=g.words.filter(w=>CLIPS[w.w]).length;return`<div class="grouprow"><span class="grow">${L_LEVELS[g.lv].n}</span><b>${n}/${g.words.length}</b><button class="btn" data-act="rec" data-lv="${g.lv}">${n===g.words.length?'Bekijken':'Inspreken'}</button></div>`}).join('')}
+   ${IDB_OK?'':'<p class="warn">Deze browser kan geen opnames bewaren. Ze verdwijnen als je de pagina sluit.</p>'}</div>
+  <div class="panel"><h3>Computerstem</h3>
+   ${vs.length?`<div class="field"><label for="p-voice">Stem</label><select id="p-voice"><option value="">Automatisch</option>${vs.map(v=>`<option ${DB.voice===v.name?'selected':''}>${esc(v.name)}</option>`).join('')}</select></div>`
+     :'<p class="small">Er is geen Nederlandse stem gevonden op dit apparaat. Voeg er een toe in de instellingen van je telefoon (Toegankelijkheid / Gesproken materiaal) en herlaad de pagina. Of spreek de woorden zelf in.</p>'}
+   <div class="two"><button class="btn" data-act="testvoice">Test stem</button><button class="btn" data-act="sfx">${DB.sfx===false?'Geluidjes aan':'Geluidjes uit'}</button></div></div>
+  <div class="panel"><h3>Hoe het werkt</h3><p class="small">Elk rondje heeft vooral opdrachten van het huidige niveau en af en toe herhaling van eerdere kernen of blokken. Een goed antwoord in één keer geeft 2 blokjes en 1 ster; in twee keer 1 blokje. Sterren spelen nieuwe bouwstenen vrij, blokjes worden uitgegeven bij het bouwen. Na elk rondje komt er speeltijd bij (maximaal drie rondjes gespaard).</p>
+   <p class="small muted">Alles wordt bewaard in deze browser op dit apparaat.</p></div>`;
+  show('s-parent')}
+let EDIT=null,AV='kat',DELARM=false;
+function renderEdit(id){const k=id?DB.kids.find(x=>x.id===id):null;EDIT=id;AV=k?k.avatar:pick(AVATARS);DELARM=false;const s=$('#s-edit');
+  let stats='',sugg='';
+  if(k){const rows=Object.entries(k.stats).sort((a,b)=>b[1].tot-a[1].tot);
+    stats=rows.length?rows.map(([key,v])=>{const p=Math.round(v.ok/v.tot*100);return`<div class="stat"><span>${SKILL[key]||key}</span><div class="meter"><i style="width:${p}%"></i></div><b>${p}%</b></div>`}).join('')
+      +`<p class="small muted">Percentage in één keer goed · ${rows.reduce((a,[,v])=>a+v.tot,0)} opdrachten totaal</p>`:'<p class="muted small">Nog geen opdrachten gemaakt.</p>';
+    const L=k.lvl['L'+k.lees],Rr=k.lvl['R'+k.reken];
+    if(L&&L.tot>=20&&L.ok/L.tot>=.85&&k.lees<L_LEVELS.length-1)sugg+=`<div class="suggest"><b>${esc(k.name)} doet ${L_LEVELS[k.lees].n} al goed (${Math.round(L.ok/L.tot*100)}%).</b><button class="btn" data-act="lvlup" data-sub="L">Naar ${L_LEVELS[k.lees+1].n}</button></div>`;
+    if(Rr&&Rr.tot>=20&&Rr.ok/Rr.tot>=.85&&k.reken<8)sugg+=`<div class="suggest"><b>${esc(k.name)} doet Blok ${k.reken+1} al goed (${Math.round(Rr.ok/Rr.tot*100)}%).</b><button class="btn" data-act="lvlup" data-sub="R">Naar Blok ${k.reken+2}</button></div>`}
+  s.innerHTML=`<div class="row"><h2 class="grow">${k?esc(k.name):'Nieuw kind'}</h2><button class="btn" data-act="${DB.kids.length?'parentback':'back'}">Terug</button></div>
+  ${sugg}
+  <div class="panel">
+   <div class="field"><label for="f-name">Naam</label><input id="f-name" type="text" maxlength="20" value="${k?esc(k.name):''}" placeholder="Bijvoorbeeld Marim"></div>
+   <div class="field"><label>Figuurtje</label><div class="avpick" id="f-av">${AVATARS.map(a=>`<button class="btn ${a===AV?'sel':''}" data-act="av" data-id="${a}" aria-label="${TMAP[a].name}">${img(a,'','gras')}</button>`).join('')}</div></div>
+   <div class="field"><label for="f-lees">Lezen: waar is de klas nu?</label><select id="f-lees">${L_LEVELS.map((l,i)=>`<option value="${i}" ${(k?k.lees:0)===i?'selected':''}>${l.n}${l.g.length?' — '+l.g.join(', '):i===12?' — herhalen':' — langere woorden en zinnen'}</option>`).join('')}</select></div>
+   <div class="field"><label for="f-reken">Rekenen: welk blok?</label><select id="f-reken">${R_BLOK.map((b,i)=>`<option value="${i}" ${(k?k.reken:0)===i?'selected':''}>Blok ${i+1} — ${b.d}</option>`).join('')}</select></div>
+   <div class="two"><div class="field"><label for="f-round">Opdrachten per rondje</label><select id="f-round">${[5,6,8,10,12].map(n=>`<option ${(k?k.perRound:8)===n?'selected':''}>${n}</option>`).join('')}</select></div>
+    <div class="field"><label for="f-play">Speeltijd per rondje</label><select id="f-play">${[1,2,3,5].map(n=>`<option value="${n}" ${(k?k.playMin:2)===n?'selected':''}>${n} min</option>`).join('')}</select></div></div>
+   <button class="btn gold" data-act="savekid">Opslaan</button></div>
+  ${k?`<div class="panel"><h3>Voortgang</h3>${stats}</div>
+   <div class="panel"><h3>Laatste rondjes</h3>${k.sessions.slice(-6).reverse().map(x=>`<div class="row small"><span class="grow">${x.d} · ${x.sub==='L'?'Lezen '+L_LEVELS[x.lvl].n:'Rekenen Blok '+(x.lvl+1)}</span><b>${x.first}/${x.n}</b></div>`).join('')||'<p class="muted small">Nog geen rondjes.</p>'}</div>
+   <button class="btn ghost" data-act="delkid" style="color:var(--bad)">Kind verwijderen</button>`:''}`;
+  show('s-edit')}
+function saveKid(){const name=$('#f-name').value.trim();if(!name){toast('Vul een naam in.');return}
+  const lees=+$('#f-lees').value,reken=+$('#f-reken').value,perRound=+$('#f-round').value,playMin=+$('#f-play').value;
+  let k=EDIT&&DB.kids.find(x=>x.id===EDIT);
+  if(k)Object.assign(k,{name,avatar:AV,lees,reken,perRound,playMin});else{k=newKid(name,AV,lees,reken);k.perRound=perRound;k.playMin=playMin;DB.kids.push(k)}
+  const isNew=!EDIT;save();toast('Opgeslagen');if(DB.kids.length===1){DB.cur=k.id;save()}
+  if(isNew)renderGuide(k);else renderParent()}
+
+/* ---------- word recording ---------- */
+function hoorPool(lv){return[...WORDS.filter(w=>w.lvl===lv),...NOPIC.filter(w=>w.lvl===lv)]}
+function recGroups(){const out=[];for(let lv=0;lv<L_LEVELS.length;lv++){const words=hoorPool(lv);if(words.length)out.push({lv,words})}return out}
+const recLv=k=>Math.min(k.lees,Math.max(...recGroups().map(g=>g.lv)));
+function renderGuide(k){const g=recGroups().filter(x=>x.lv<=k.lees),tot=g.reduce((a,x)=>a+x.words.length,0),lv=recLv(k);
+  const s=$('#s-guide');
+  s.innerHTML=`<div class="hero"><h2>${esc(k.name)} staat klaar</h2><p class="sub">Nog één ding: wil je woorden inspreken?</p></div>
+  <div class="panel"><ol class="steps">
+   <li>Bij <b>"Welk woord hoor je?"</b> hoort ${esc(k.name)} een woord en kiest het goede woord uit drie.</li>
+   <li>Standaard zegt de <b>computerstem</b> het woord. Die klinkt soms vreemd, en dat is lastig als je net leert lezen.</li>
+   <li>Spreek je de woorden zelf in, dan hoort ${esc(k.name)} jouw stem. Per woord: tik op opnemen, zeg alleen het woord, rustig en duidelijk.</li>
+   <li>Begin met ${L_LEVELS[lv].n}. Tot en met ${L_LEVELS[k.lees].n} zijn het ${tot} woorden, een paar minuten werk. De rest kan later in de ouderhoek.</li></ol></div>
+  <div class="row"><button class="btn grow" data-act="testvoice">Hoor de computerstem</button></div>
+  <button class="btn gold big" data-act="rec" data-lv="${lv}">🎙<span>Nu inspreken<small>${L_LEVELS[lv].n} · ${hoorPool(lv).length} woorden</small></span></button>
+  <button class="btn" data-act="guidedone">Later, gebruik de computerstem</button>`;
+  show('s-guide')}
+let RS={lv:0,i:0,from:'parent'},REC={mode:null,stream:null,mr:null,chunks:[],timer:null,on:false};
+function openRec(lv,from){const ws=hoorPool(lv);const first=ws.findIndex(w=>!CLIPS[w.w]);RS={lv,i:first<0?0:first,from};renderRec()}
+function renderRec(){const ws=hoorPool(RS.lv),w=ws[RS.i],has=!!CLIPS[w.w],done=ws.filter(x=>CLIPS[x.w]).length;
+  const s=$('#s-rec');
+  s.innerHTML=`<div class="row"><button class="btn" data-act="recback">Klaar</button><div class="grow"></div><b>${L_LEVELS[RS.lv].n} · ${done}/${ws.length}</b></div>
+  <div class="reccard">${w.e?`<div class="emo">${w.e}</div>`:''}<div class="bigword">${w.w}</div>
+   <span class="recstate ${has?'own':''}">${has?'✓ Jouw opname':'Nu: computerstem'}</span>
+   <div class="recbar" id="recbar"><i></i></div>
+   <button class="btn recbtn ${REC.on?'on':''}" data-act="recgo">${REC.on?'■ Stop':REC.mode==='file'?'🎙 Kies opname':'● Opnemen'}</button>
+   <div class="two" style="width:100%"><button class="btn" data-act="recplay">▶ Luister</button><button class="btn grass" data-act="recnext">Volgende →</button></div>
+   ${has?'<button class="btn ghost small" data-act="recdel">Opname wissen</button>':''}</div>
+  ${REC.mode==='file'?`<p class="warn">De microfoon is hier niet beschikbaar. Tik op "Kies opname": je telefoon opent dan de recorder of je bestanden. Neem het woord op en kies het bestand.</p>`
+   :'<p class="small muted">Zeg alleen het woord. Houd de telefoon dichtbij en zorg dat het stil is. De opname stopt vanzelf na 3 seconden.</p>'}
+  <div class="wchips">${ws.map((x,i)=>`<button class="wchip ${CLIPS[x.w]?'has':''} ${i===RS.i?'now':''}" data-act="recjump" data-i="${i}">${x.w}</button>`).join('')}</div>`;
+  show('s-rec')}
+async function recGo(){const w=hoorPool(RS.lv)[RS.i].w;
+  if(REC.on){stopRec();return}
+  if(REC.mode==='file'){const f=$('#rec-file');f.value='';f.onchange=async()=>{const file=f.files[0];if(file){await putClip(w,file);playWord(w);renderRec()}};f.click();return}
+  try{if(!REC.stream)REC.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+    if(typeof MediaRecorder==='undefined')throw Error('no recorder')}
+  catch(e){REC.mode='file';renderRec();toast('Microfoon niet beschikbaar. Tik nog eens om een opname te kiezen.');return}
+  const mr=new MediaRecorder(REC.stream);REC.chunks=[];REC.mr=mr;REC.on=true;
+  mr.ondataavailable=e=>{if(e.data&&e.data.size)REC.chunks.push(e.data)};
+  mr.onstop=async()=>{clearTimeout(REC.timer);REC.on=false;REC.mr=null;const b=new Blob(REC.chunks,{type:mr.mimeType||'audio/webm'});
+    if(b.size>800){await putClip(w,b);playWord(w)}else toast('Er is niets opgenomen. Probeer het nog eens.');if(SCREEN==='s-rec')renderRec()};
+  mr.start();renderRec();requestAnimationFrame(()=>requestAnimationFrame(()=>$('#recbar')?.classList.add('run')));
+  REC.timer=setTimeout(stopRec,3000)}
+function stopRec(){if(REC.mr&&REC.mr.state==='recording')REC.mr.stop()}
+function closeRec(){stopRec();if(REC.stream){REC.stream.getTracks().forEach(t=>t.stop());REC.stream=null}
+  if(RS.from==='guide'){const k=cur()||DB.kids[DB.kids.length-1];DB.cur=k.id;save();renderHome()}else renderParent()}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,k=cur();
+  switch(a){
+   case'addkid':renderEdit(null);break;
+   case'pickkid':DB.cur=b.dataset.id;save();renderHome(true);break;
+   case'switch':renderKids();break;
+   case'parent':openGate(renderParent);break;
+   case'back':DB.kids.length?(cur()?renderHome():renderKids()):renderWelcome();break;
+   case'parentback':renderParent();break;
+   case'gateok':if(+$('#gate-in').value===GATE)AFTER_GATE();else{toast('Dat klopt niet.');renderHome()}break;
+   case'go':startSession(b.dataset.sub);break;
+   case'home':document.querySelectorAll('.overlay').forEach(o=>o.remove());renderHome();break;
+   case'quit':S=null;renderHome();break;
+   case'replay':playWord(EX.replay);break;
+   case'ans':answer(+b.dataset.i,b);break;
+   case'tile':tileTap(+b.dataset.i,b);break;
+   case'build':renderBuild();break;
+   case'buildstop':stopBuild();break;
+   case'tool':{const t=b.dataset.id;if(t!=='gum'&&k.stars<TMAP[t].need){toast(`Nog ${TMAP[t].need-k.stars} sterren nodig voor ${TMAP[t].name}.`);SFX.bad();break}
+     BT.tool=t;renderPalette();break}
+   case'edit':renderEdit(b.dataset.id);break;
+   case'newkid':renderEdit(null);break;
+   case'av':AV=b.dataset.id;document.querySelectorAll('#f-av button').forEach(x=>x.classList.toggle('sel',x===b));break;
+   case'savekid':saveKid();break;
+   case'lvlup':{const kk=DB.kids.find(x=>x.id===EDIT);if(b.dataset.sub==='L')kk.lees++;else kk.reken++;save();renderEdit(EDIT);toast('Niveau omhoog');break}
+   case'delkid':if(!DELARM){DELARM=true;b.textContent='Zeker weten? Tik nog eens om te verwijderen';break}
+     DB.kids=DB.kids.filter(x=>x.id!==EDIT);if(DB.cur===EDIT)DB.cur=null;save();DB.kids.length?renderParent():renderWelcome();break;
+   case'testvoice':tts('maan. vis. boom.');break;
+   case'sfx':DB.sfx=DB.sfx===false;save();renderParent();break;
+   case'rec':openRec(+b.dataset.lv,SCREEN==='s-guide'?'guide':'parent');break;
+   case'recgo':recGo();break;
+   case'recplay':playWord(hoorPool(RS.lv)[RS.i].w);break;
+   case'recnext':if(REC.on)break;RS.i=(RS.i+1)%hoorPool(RS.lv).length;renderRec();break;
+   case'recjump':if(REC.on)break;RS.i=+b.dataset.i;renderRec();break;
+   case'recdel':delClip(hoorPool(RS.lv)[RS.i].w).then(renderRec);break;
+   case'recback':closeRec();break;
+   case'guidedone':{const k=cur()||DB.kids[DB.kids.length-1];DB.cur=k.id;save();renderHome();break}
+  }});
+document.addEventListener('change',e=>{if(e.target.id==='p-voice'){DB.voice=e.target.value;save();tts('maan. vis. boom.')}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='gate-in')$('[data-act="gateok"]').click()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
+loadClips().finally(start);
+</script>
+
+</body></html>
