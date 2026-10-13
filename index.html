@@ -621,23 +621,27 @@ function renderBuild(){const k=cur();if(k.credit<=0)return renderHome();const s=
   show('s-build');renderPalette();drawBuild();
   const cv=$('#b-cv');
   cv.addEventListener('pointerdown',e=>{BT.paint=true;BT.last=-1;place(e)});
-  cv.addEventListener('pointermove',e=>{if(BT.paint&&TMAP[BT.tool]?.t==='g'||BT.paint&&BT.tool==='gum')place(e)});
+  cv.addEventListener('pointermove',e=>{if(BT.paint&&TMAP[BT.tool]?.t==='g'||BT.paint&&BT.tool==='gum')place(e,true)});
   ['pointerup','pointerleave','pointercancel'].forEach(ev=>cv.addEventListener(ev,()=>BT.paint=false));
   clearInterval(BT.int);
   BT.int=setInterval(()=>{if(document.hidden||SCREEN!=='s-build')return;k.credit--;const t=$('#b-timer');if(t){t.textContent=fmtTime(k.credit);t.classList.toggle('low',k.credit<=15)}
     if(k.credit<=10&&k.credit>0)SFX.tick();if(k.credit%5===0)save();if(k.credit<=0)timeUp()},1000)}
 function renderPalette(){const k=cur();
-  $('#b-pal').innerHTML=[...TILES.map(t=>{const lock=k.stars<t.need;
+  $('#b-pal').innerHTML=[`<button class="btn tool ${BT.tool==='gum'?'sel':''}" data-act="tool" data-id="gum">${img('gum')}<span>Gum</span><span class="cost">terug</span></button>`,
+   ...TILES.map(t=>{const lock=k.stars<t.need;
     return`<button class="btn tool ${lock?'locked':''} ${BT.tool===t.id?'sel':''}" data-act="tool" data-id="${t.id}">${img(t.id,'',t.t==='o'?(t.water?'water':'gras'):undefined)}<span>${t.name}</span>
-     <span class="cost">${lock?img('star')+t.need:img('brick')+t.cost}</span></button>`}),
-   `<button class="btn tool ${BT.tool==='gum'?'sel':''}" data-act="tool" data-id="gum">${img('gum')}<span>Gum</span><span class="cost">terug</span></button>`].join('')}
+     <span class="cost">${lock?img('star')+t.need:img('brick')+t.cost}</span></button>`})].join('')}
 function drawBuild(){const c=$('#b-cv'),k=cur();if(c&&k)drawWorld(c.getContext('2d'),k.world,FRAME)}
-function place(e){const k=cur();if(k.credit<=0)return;const cv=$('#b-cv'),r=cv.getBoundingClientRect();
+// drag=true while painting by dragging; a single tap with a ground tile also clears the object on that cell.
+function place(e,drag){const k=cur();if(k.credit<=0)return;const cv=$('#b-cv'),r=cv.getBoundingClientRect();
   const x=Math.floor((e.clientX-r.left)/r.width*COLS),y=Math.floor((e.clientY-r.top)/r.height*ROWS);
   if(x<0||y<0||x>=COLS||y>=ROWS)return;const i=y*COLS+x;if(i===BT.last)return;BT.last=i;const w=k.world;
   if(BT.tool==='gum'){if(w.o[i]){k.bricks+=TMAP[w.o[i]].cost;w.o[i]=null}else if(w.g[i]!=='gras'){k.bricks+=TMAP[w.g[i]].cost;w.g[i]='gras'}else return}
   else{const T=TMAP[BT.tool];
-    if(T.t==='g'){if(w.g[i]===T.id)return;const O=w.o[i]&&TMAP[w.o[i]];if(O&&(!!O.water)!==(T.id==='water')){toast(O.water?'Hier staat iets dat op het water hoort.':'Haal eerst weg wat hier staat.');BT.paint=false;return}
+    if(T.t==='g'){const O=w.o[i]&&TMAP[w.o[i]];
+      if(O&&!drag){const c=w.g[i]===T.id?0:T.cost;if(k.bricks+O.cost<c){toast('Te weinig blokjes. Oefen nog een rondje!');BT.paint=false;SFX.bad();return}
+        k.bricks+=O.cost-c;w.o[i]=null;w.g[i]=T.id;SFX.place();drawBuild();$('#b-bricks').innerHTML=img('brick')+k.bricks;return}
+      if(w.g[i]===T.id)return;if(O&&(!!O.water)!==(T.id==='water')){toast(O.water?'Hier staat iets dat op het water hoort.':'Haal eerst weg wat hier staat.');BT.paint=false;return}
       if(k.bricks<T.cost){toast('Te weinig blokjes. Oefen nog een rondje!');BT.paint=false;SFX.bad();return}k.bricks-=T.cost;w.g[i]=T.id}
     else{if(w.o[i]===T.id)return;if(T.water&&w.g[i]!=='water'){toast(`${T.name}: die moet op het water!`);SFX.bad();return}
       if(!T.water&&w.g[i]==='water'){toast('Dat kan niet op het water.');SFX.bad();return}

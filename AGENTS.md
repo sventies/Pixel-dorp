@@ -26,7 +26,7 @@ GitHub Pages, deployed from the `main` branch, folder `/` (repo Settings → Pag
 
 ## Owner's decisions (keep these unless told otherwise)
 
-1. **Language:** everything in Dutch, both kid-facing and parent-facing text.
+1. **Language:** the app is in Dutch, both kid-facing and parent-facing text. Everything else is in English: conversations with the owner, code comments, commit messages and documentation. The owner is Dutch and may sometimes give context in Dutch; reply and document in English anyway.
 2. **Curriculum:** follows the school methods on the chart in `docs/curriculum-groep3.png` (text version: `docs/curriculum-groep3.md`):
    - Reading: **Veilig leren lezen (VLL), kim-versie**. Units are *kernen*: Start, Kern 1–11, Afsluiting. Goal by the end of groep 3: AVI E3.
    - Math: **De wereld in getallen (WIG) 5.1**. Units are *blokken*: Blok 1–9.
@@ -82,7 +82,8 @@ Every exercise screen has a progress-pip bar, an icon plus short prompt text (`P
 ### Rewards
 
 - First try correct: +2 bricks, +1 star. Second try: +1 brick. Perfect round: +3 bonus bricks.
-- **Stars** are cumulative and unlock `TILES` (flower 0 → unicorn 400). **Bricks** are spent when building; the eraser refunds them.
+- **Stars** are cumulative and unlock `TILES` (flower 0 → unicorn 400). **Bricks** are spent when building; the eraser (`gum`, first button in the palette) refunds them.
+- Tapping a cell with a ground tile (e.g. grass) also clears the object on it, with a refund. Dragging ground tiles leaves objects in place, so painting grass doesn't wipe out houses by accident.
 - Each finished round adds `playMin` minutes of building time, capped at 3 rounds' worth. The timer counts down only while building and pauses when the tab is hidden.
 - Daily streak is tracked.
 
