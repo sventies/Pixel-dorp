@@ -514,6 +514,8 @@ function genR(b){const B=Math.random()<.35?R(0,b):b;return RG[pick(R_BLOK[B].t)]
 /* ---------- kid model ---------- */
 function newKid(name,avatar,lees,reken){return{id:'k'+Date.now().toString(36)+R(100,999),name,avatar,lees,reken,perRound:8,playMin:2,
   stars:0,bricks:6,credit:0,world:newWorld(),stats:{},lvl:{},sessions:[],streak:0,lastDay:'',created:today()}}
+// Fresh progress for an existing kid: keeps name, avatar, levels and round settings.
+function resetKid(k){const f=newKid(k.name,k.avatar,k.lees,k.reken);return{...f,id:k.id,perRound:k.perRound,playMin:k.playMin,created:k.created}}
 function nextUnlock(k){return TILES.find(t=>t.need>k.stars)}
 
 /* ---------- navigation ---------- */
@@ -676,8 +678,8 @@ function renderParent(){const s=$('#s-parent');const vs=voices;
   <div class="panel"><h3>Hoe het werkt</h3><p class="small">Elk rondje heeft vooral opdrachten van het huidige niveau en af en toe herhaling van eerdere kernen of blokken. Een goed antwoord in één keer geeft 2 blokjes en 1 ster; in twee keer 1 blokje. Sterren spelen nieuwe bouwstenen vrij, blokjes worden uitgegeven bij het bouwen. Na elk rondje komt er speeltijd bij (maximaal drie rondjes gespaard).</p>
    <p class="small muted">Alles wordt bewaard in deze browser op dit apparaat.</p></div>`;
   show('s-parent')}
-let EDIT=null,AV='kat',DELARM=false;
-function renderEdit(id){const k=id?DB.kids.find(x=>x.id===id):null;EDIT=id;AV=k?k.avatar:pick(AVATARS);DELARM=false;const s=$('#s-edit');
+let EDIT=null,AV='kat',DELARM=false,RESARM=false;
+function renderEdit(id){const k=id?DB.kids.find(x=>x.id===id):null;EDIT=id;AV=k?k.avatar:pick(AVATARS);DELARM=false;RESARM=false;const s=$('#s-edit');
   let stats='',sugg='';
   if(k){const rows=Object.entries(k.stats).sort((a,b)=>b[1].tot-a[1].tot);
     stats=rows.length?rows.map(([key,v])=>{const p=Math.round(v.ok/v.tot*100);return`<div class="stat"><span>${SKILL[key]||key}</span><div class="meter"><i style="width:${p}%"></i></div><b>${p}%</b></div>`}).join('')
@@ -697,6 +699,7 @@ function renderEdit(id){const k=id?DB.kids.find(x=>x.id===id):null;EDIT=id;AV=k?
    <button class="btn gold" data-act="savekid">Opslaan</button></div>
   ${k?`<div class="panel"><h3>Voortgang</h3>${stats}</div>
    <div class="panel"><h3>Laatste rondjes</h3>${k.sessions.slice(-6).reverse().map(x=>`<div class="row small"><span class="grow">${x.d} · ${x.sub==='L'?'Lezen '+L_LEVELS[x.lvl].n:'Rekenen Blok '+(x.lvl+1)}</span><b>${x.first}/${x.n}</b></div>`).join('')||'<p class="muted small">Nog geen rondjes.</p>'}</div>
+   <button class="btn ghost" data-act="resetkid">Voortgang wissen (opnieuw beginnen)</button>
    <button class="btn ghost" data-act="delkid" style="color:var(--bad)">Kind verwijderen</button>`:''}`;
   show('s-edit')}
 function saveKid(){const name=$('#f-name').value.trim();if(!name){toast('Vul een naam in.');return}
@@ -786,6 +789,8 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(
    case'av':AV=b.dataset.id;document.querySelectorAll('#f-av button').forEach(x=>x.classList.toggle('sel',x===b));break;
    case'savekid':saveKid();break;
    case'lvlup':{const kk=DB.kids.find(x=>x.id===EDIT);if(b.dataset.sub==='L')kk.lees++;else kk.reken++;save();renderEdit(EDIT);toast('Niveau omhoog');break}
+   case'resetkid':if(!RESARM){RESARM=true;b.textContent='Zeker weten? Sterren, blokjes, dorp en statistieken gaan weg. Tik nog eens.';break}
+     {const kk=DB.kids.find(x=>x.id===EDIT);Object.assign(kk,resetKid(kk));save();renderEdit(EDIT);toast('Voortgang gewist');break}
    case'delkid':if(!DELARM){DELARM=true;b.textContent='Zeker weten? Tik nog eens om te verwijderen';break}
      DB.kids=DB.kids.filter(x=>x.id!==EDIT);if(DB.cur===EDIT)DB.cur=null;save();DB.kids.length?renderParent():renderWelcome();break;
    case'testvoice':tts('maan. vis. boom.');break;

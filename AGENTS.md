@@ -91,6 +91,7 @@ Every exercise screen has a progress-pip bar, an icon plus short prompt text (`P
 
 - Behind a multiplication gate (a×b with 4–9).
 - Manage kids: name, avatar, kern, blok, exercises per round, play minutes.
+- Reset a kid ("Voortgang wissen", tap twice to confirm): clears stars, bricks, play time, world, stats, sessions and streak, keeps name, avatar, levels and round settings (`resetKid()`). Word recordings are per device and stay.
 - Stats: % first-try correct per skill, recent rounds.
 - **Level-up suggestion:** shown when the current level has ≥ 20 attempts and ≥ 85% first-try correct.
 - **Words recording:** per-kern counts (n/m) and a recording flow, one word at a time. Record auto-stops after 3 s, then plays back; options for re-record, delete, next, and word chips to jump. Computer-voice picker and test button. Sound-effects toggle.
